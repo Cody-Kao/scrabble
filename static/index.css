@@ -1,0 +1,832 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+.container {
+    height: 100%; /* Fill the height of the viewport */
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 10px;
+    width: 70%;
+    margin: 0 auto;
+}
+
+.container > * {
+    border: 3px solid black;
+}
+
+#sideBar {
+    display: grid;
+    gap:3px;
+    grid-template-columns: repeat(6, 1fr);
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 1;
+    grid-row-end: 7;
+    border-radius: 10px;
+}
+
+#memberBar {
+    grid-column-start: 1;
+    grid-column-end: 6;
+    border-radius: 10px;
+    overflow-y: scroll;
+}
+
+#memberBar > .playerBlock {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    width: 200px; /* Occupy the full width of the container */
+    min-height: calc(100%/8); /* Set a minimum height for each player block */
+    border-bottom: 4px solid rgb(104, 104, 104, 0.3);
+    box-sizing: border-box;
+}
+
+/*
+#memberBar {
+    grid-column-start: 1;
+    grid-column-end: 6;
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(16, 1fr);
+    padding-right: 35px;
+}
+
+#memberBar > .playerBlock {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    grid-row: span 2;
+    grid-column-start: 1;
+    grid-column-end: 6;
+    border-bottom: 4px solid rgb(104, 104, 104, 0.3);
+}
+*/
+
+#memberBar > .lastPlayerBlock {
+    border: none;
+}
+
+#memberBar > .emptyPlayerBlock {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    grid-row: span 2;
+    grid-column-start: 1;
+    grid-column-end: 6;
+    opacity: 0.3;
+}
+
+.playerBlock > .status {
+    position: relative;
+    grid-column-start: 1;
+    grid-column-end: 2;
+    grid-row-start: 1;
+    grid-row-end: 3;
+}
+
+.playerBlock > .status > .room-master {
+    position: absolute;
+    font-weight: bold;
+    bottom: 0px;
+}
+
+.playerBlock > .status > .painter {
+    background-image: url("painter.png");
+    width: 100%;
+    height: 100%;
+    background-size: 25px 25px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.playerBlock > .status > .guessed {
+    background-image: url("guessed.png");
+    width: 100%;
+    height: 100%;
+    background-size: 25px 25px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.playerBlock > .profile {
+    grid-column-start: 2;
+    grid-column-end: 4;
+    grid-row-start: 1;
+    grid-row-end: 3;
+    background-image: url("profile.webp");
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 100%;
+    background-size: 60px 60px;
+    background-position: center; /* Center the background image */
+}
+
+.playerBlock > .name {
+    grid-column-start: 4;
+    grid-column-end: 7;
+    grid-row-start: 1;
+    grid-row-end: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #000;
+    font-family:monospace, Arial, Helvetica, sans-serif;
+    white-space: nowrap;
+}
+
+.playerBlock > .score {
+    grid-column-start: 4;
+    grid-column-end: 7;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-weight: bold;
+    font-size: 20px;
+    color: #000;
+    font-family:monospace, Arial, Helvetica, sans-serif;
+}
+
+#toolKit {
+    grid-column-start: 6;
+    grid-column-end: 7 ;
+    display: grid;
+    grid-template-rows: repeat(8, 1fr);
+    padding-right: 12px;
+}
+
+#penStyle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    border-bottom: 2px solid rgb(0, 0, 0);
+    padding-top: 5px;
+    grid-row-start: 1;
+    grid-row-end: 4;
+}
+
+#penStyle > .typeOfPen {
+    height: 30px;
+    width: 30px;
+    background-size: 30px 30px;
+    cursor: pointer;
+    border: 2px solid white; /* Add border for better visibility */
+    transition: border 0.3s ease; /* Add smooth transition effect */
+}
+
+#penStyle > .typeOfPen:hover {
+    border-radius: 5px; /* Add border-radius for a rounded effect on hover */
+    border: 2px solid rgb(0, 0, 0); /* Add border for better visibility */
+}
+
+#penStyle > .typeOfPen.selected {
+    border: 2px solid rgb(0, 0, 0); /* Add a border with a different color for the selected state */
+}
+
+#penStyle > #pen {
+    background-image: url("pen.webp");
+}
+
+#penStyle > #crayon {
+    background-image: url("crayon.png");
+}
+
+#penStyle > #bristleBrush {
+    background-image: url("bristleBrush.png");
+}
+
+#penStyle > #sprayGun {
+    transform: rotate(-40deg);
+    background-image: url("sprayGun.png");
+}
+
+#penStyle > #eraser {
+    background-image: url("eraser.png");
+}
+
+.stroke-width-controls {
+    grid-row-start: 4;
+    grid-row-end: 6;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 20px;
+    height: 60px; /* Adjust the height as needed */
+    align-items: center; /* Center items horizontally */
+    justify-content: center; /* Center items vertically */
+    margin-top: auto; /* Center vertically */
+    margin-bottom: auto; /* Center vertically */
+    padding-left: 36%;
+}
+
+#strokeWidthLabelTop {
+    /* height, width and background-size to change the size of image dot */
+    height: 50px;
+    width: 50px;
+    background-image: url("dot.jpg");
+    background-size: 50px 50px;
+    position: absolute;
+    top:-60px;
+}
+
+#strokeWidthLabelBottom {
+    height: 5px;
+    width: 5px;
+    background-image: url("dot.jpg");
+    background-size: 5px 5px;
+    position: absolute;
+    bottom:-40px;
+}
+
+#strokeWidthInput {
+    width: 100px;
+    transform: rotate(-90deg);
+}
+
+#strokeWidthLabel {
+    font-size: 16px; /* Adjust font size as needed */
+}
+
+#colorOptions {
+    border-top: 2px solid rgb(0, 0, 0);
+    padding-top: 5px;
+    grid-row-start: 6;
+    grid-row-end: 9;
+    display: flex;
+    flex-direction: column;
+}
+
+.color-row {
+    display: flex;
+    gap: 3px;
+}
+
+.color-option {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    border: 2px solid white; /* Add border for better visibility */
+    transition: border 0.3s ease; /* Add smooth transition effect */
+}
+
+.color-option:hover {
+    border: 2px solid #000; /* Border color on hover */
+}
+
+.color-option.selected {
+    border: 2px solid #000; /* Border color for selected color */
+}
+
+#advancedColor {
+    margin-top: 10px;
+    display: flex;
+}
+
+#currentColorDisplay {
+    background-color: black;
+    width: 32.2px;
+    height: 32.2px;
+    margin-right: 5.5px;
+}
+
+#colorIcon {
+    width: 34px;
+    height: 34px;
+    background-image: url("colors.webp");
+    background-repeat: no-repeat;
+    cursor: pointer;
+    margin-left: 5.5px;
+}
+
+#colourInput {
+    width: 0;
+    height: 0;
+    visibility: hidden;
+}
+
+#mainSection {
+    position: relative;
+    grid-column-start: 4;
+    grid-column-end: 10;
+    grid-row-start: 1;
+    grid-row-end: 5;
+    border-radius: 10px;
+}
+
+#wait-member {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    z-index: 100;
+    position: absolute;
+    font-size: 50px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#game-over-wait-member {
+    display: none;
+    position: absolute;
+    bottom:10px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#wait-start {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    z-index: 100;
+    position: absolute;
+    font-size: 50px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#game-over-wait-start {
+    display: none;
+    position: absolute;
+    bottom:10px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#startBtn {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 50px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#round-start {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    z-index: 100;
+    position: absolute;
+    font-size: 50px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#round-over {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    z-index: 100;
+    position: absolute;
+    font-size: 50px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+#round-skip {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    z-index: 100;
+    position: absolute;
+    font-size: 50px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+/* Game over podium */
+#game-over * {
+    box-sizing: border-box;
+}
+
+#game-over {
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    gap:70px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    box-sizing: border-box;
+    overflow: visible; /* or overflow: initial; */
+}
+
+#game-over .annonucement {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Arial', sans-serif;
+    font-size: 24px;
+    text-align: center;
+    margin-top: 20px; /* Add margin-top for spacing */
+}
+
+#game-over .annonucement span {
+    font-weight: bold;
+    font-size: 30px; /* Increase font size for emphasis */
+}
+
+/* Optional: Add styling for better appearance */
+#game-over .annonucement {
+    background-color: #f0f0f0;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+
+#game-over .podium {
+    display: flex;
+    gap: 40px; /* Adjust the gap between players */
+    margin-top: -20px; /* Move the podium up a little bit */
+}
+
+#game-over .player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#game-over .name {
+    font-size: 28px; /* Adjust the font size as needed */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add text shadow */
+}
+
+#game-over .rank,
+#game-over .name {
+    margin-bottom: 5px;
+}
+
+#game-over .score {
+    font-size: 28px; /* Adjust the font size as needed */
+    margin-bottom: 10px;
+}
+
+#game-over .first > .rank {
+    background-image: url("first.png");
+    background-repeat: no-repeat;
+    background-size: 120px, 120px;
+    width: 120px;
+    height: 120px;
+}
+
+#game-over .second > .rank {
+    background-image: url("second.png");
+    background-repeat: no-repeat;
+    background-size: 100px, 100px;
+    width: 100px;
+    height: 100px;
+}
+
+#game-over .third > .rank {
+    background-image: url("third.png");
+    background-repeat: no-repeat;
+    background-size: 100px, 100px;
+    width: 100px;
+    height: 100px;
+}
+
+/* restart button */
+#restartBtn {
+    display: none;
+    position: absolute;
+    bottom:10px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+/* 選擇題目 */
+#choose-question {
+    position: absolute;
+    display: none;
+    justify-content: space-between;
+    height: 100%; /* Adjust as needed */
+    width: 100%;
+    align-items: center;
+}
+
+.choose-question-hint {
+    position: absolute;
+    top:40px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 30px;
+    font-weight: bold;
+    font-family: monospace, Arial, Helvetica, sans-serif; 
+    white-space: nowrap;
+}
+
+.question-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px; /* Adjust the font size for the question description */
+}
+
+.question-area > span {
+    font-weight: bold;
+}
+
+.question-button {
+    margin-top: 30px; /* Adjust as needed */
+    padding: 15px 20px; /* Adjust as needed */
+    font-size: 22px; /* Adjust the font size for the button */
+}
+
+#canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* progress bar */
+#progressBar {
+    width: 95%;
+    height: 15px;
+    background-color: #eee;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%); /* Center the progress bar horizontally */
+    border-radius: 10px;
+    overflow: hidden; /* Ensure the overflow is hidden for smooth transition */
+}
+
+#progressFill {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background-color: rgb(255, 238, 0);
+    opacity: 50%; /* we can reduce it to 30% when drawing */
+}
+
+/* exit cross */
+#cross {
+    position: absolute;
+    background-image: url("cross.png");
+    background-repeat: no-repeat;
+    background-size: 35px 35px; /* Fix the syntax error */
+    width: 35px;
+    height: 35px;
+    top: -1.5%;
+    right: -2%;
+    transition: transform 0.1s ease-in-out; /* Add transition property */
+    z-index: 200; /* 要比transition還上面 */
+}
+
+#cross:hover {
+    transform: scale(1.1); /* Scale up the cross on hover */
+}
+
+#confirmation-dialog {
+    display: none;
+    position: fixed;
+    width: 300px;
+    height: 120px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    text-align: center;
+    border-radius: 10px;
+}
+
+#confirmation-dialog p {
+    font-weight: bold;
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+#confirmation-dialog button {
+    width: 100px;
+    padding: 10px;
+    margin: 0 10px; /* Add margin to separate buttons */
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#confirmation-dialog button.yes {
+    background-color: #4CAF50;
+    font-weight: bolder;
+    color: white;
+}
+
+#confirmation-dialog button.no {
+    background-color: #f44336;
+    font-weight: bolder;
+    color: white;
+}
+
+#confirmation-dialog button:hover {
+    opacity: 0.8;
+}
+
+.overlay-div {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+/* chat */
+#sysChat {
+    grid-column-start: 4;
+    grid-column-end: 7;
+    grid-row-start: 5;
+    grid-row-end: 7;
+    border-radius: 10px;
+}
+
+#publicChat {
+    grid-column-start: 7;
+    grid-column-end: 10;
+    grid-row-start: 5;
+    grid-row-end: 7;
+    border-radius: 10px;
+}
+
+#sysChat,
+#publicChat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#sysChat > #name,
+#publicChat > #name {
+    position: absolute;
+    text-align: center;
+    border-radius: 10px;
+    color: white;
+    font-weight: bold;
+    width: 100px;
+    height: 30px;
+    top: -10%;
+    right: 10%;
+    z-index: 100;
+    background-color: #042f84;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#overlay {
+    position: absolute;
+    bottom:0px;
+    height: 30px;
+    width: 100%;
+    background-color: rgb(255, 255, 255);
+    opacity: 70%;
+    z-index: 1000; /* Adjust the z-index to ensure it's above other elements */
+}
+
+#sysChatContent,
+#publicChatContent {
+    flex: 1;
+    overflow-y: scroll;
+    padding-left: 10px;
+    padding-right: 5px;
+    padding-top: 20px;
+}
+
+/* scroll bar */
+/* width */
+*::-webkit-scrollbar{
+    width: 10px;
+}
+  
+  /* Track */
+*::-webkit-scrollbar-track{
+    background: #f1f1f1; 
+}
+   
+  /* Handle */
+*::-webkit-scrollbar-thumb{
+    background: #c1c1c1; 
+    border-radius: 10px; /* roundness of the thumb */
+}
+  
+  /* Handle on hover */
+*::-webkit-scrollbar-thumb:hover{
+    background: #acacac; 
+}
+
+#sysChat input,
+#publicChat input {
+    height: 30px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.join-content {
+    color: #b79f04;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.join-timeStampSpan {
+    position: absolute;
+    color: #b79f04;
+    font-size: 20px;
+    right: 5px;
+    bottom:0px;
+}
+
+.leave-content {
+    color: #b70404;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.leave-timeStampSpan {
+    position: absolute;
+    color: #b70404;
+    font-size: 20px;
+    right: 5px;
+    bottom:0px;
+}
+
+.guess-content {
+    color: #0ab704;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.guess-timeStampSpan {
+    position: absolute;
+    color: #0ab704;
+    font-size: 20px;
+    right: 5px;
+    bottom:0px;
+}
+
+.name-span {
+    color: #444444;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.content-span {
+    color: #5b5b5b;
+    font-size: 20px;
+}
+
+.timeStampSpan {
+    position: absolute;
+    color: #5b5b5b;
+    font-size: 20px;
+    right: 5px;
+    bottom:0px;
+}

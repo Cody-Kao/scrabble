@@ -1,28 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Drawing</title>
+    <link rel="stylesheet" href="static/index.css">
 </head>
 <body>
-    <h1>Hello World</h1>
-    <script>
-        /*
-        let socket = new WebSocket("ws://localhost:5000/room/1")
-        socket.onmessage = (event) => {
-            console.log(typeof event.data)
-            console.log(event.data)
-            const jsonData = JSON.parse(event.data)
-            console.log(jsonData)
-        }
+    <div class="container" id="container">
+        <div class="sideBar" id="sideBar">
+            <div id="memberBar">
+                <div class="playerBlock">
+                    <div class="status">
+                        <div class="painter"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">A</div> <!--英文最多十字-->
+                    <div class="score">150</div>
+                </div>
+                <div class="playerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">B</div> <!--中文最多五字-->
+                    <div class="score">120</div>
+                </div>
+                <div class="playerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">C</div>
+                    <div class="score">100</div>
+                </div>
+                <div class="playerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">D</div>
+                    <div class="score">100</div>
+                </div>
+                <div class="playerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">E</div>
+                    <div class="score">90</div>
+                </div>
+                <div class="playerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">F</div>
+                    <div class="score">10</div>
+                </div>
+                <div class="playerBlock emptyPlayerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">Empty</div>
+                    <div class="score"></div>
+                </div>
+                <div class="playerBlock lastPlayerBlock emptyPlayerBlock">
+                    <div class="status">
+                        <div class="painter" style="display: none;"></div>
+                        <div class="guessed" style="display: none;"></div>
+                        <div class="room-master" style="display: none;">房主</div>
+                    </div>
+                    <div class="profile"></div>
+                    <div class="name">Empty</div>
+                    <div class="score"></div>
+                </div>
+            </div>
+            <div id="toolKit">
+                <div id="penStyle">
+                    <div class="typeOfPen selected" id="pen" name="1"></div>
+                    <div class="typeOfPen" id="bristleBrush" name="2"></div>
+                    <div class="typeOfPen" id="crayon" name="3"></div>
+                    <div class="typeOfPen" id="sprayGun" name="4"></div>
+                    <div class="typeOfPen" id="eraser" name="5"></div>
+                </div>
 
-        function send(msg, sysOrChat) {
-            var jsObject = {"Type":"System Msg", "Payload":{"Content":msg, "SysOrChat":sysOrChat}};
-            var jsonString = JSON.stringify(jsObject);
-            socket.send(jsonString)
-        }
-        */
-    </script>
+                <div class="stroke-width-controls">
+                    <span id="strokeWidthLabelTop"></span>
+                    <input type="range"  min="1" max="20" step="1" value="5" id="strokeWidthInput"/>
+                    <span id="strokeWidthLabelBottom"></span>
+                </div>
+        
+                <div id="colorOptions">
+                    <div class="color-row">
+                        <div class="color-option" style="background-color: #000000;"></div>
+                        <div class="color-option" style="background-color: #4b4b4a;"></div>
+                        <div class="color-option" style="background-color: #9c9c99;"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-option" style="background-color: #05008e;"></div>
+                        <div class="color-option" style="background-color: #0436cd;"></div>
+                        <div class="color-option" style="background-color: #0dc1e1;"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-option" style="background-color: #044e01;"></div>
+                        <div class="color-option" style="background-color: #1e8d06;"></div>
+                        <div class="color-option" style="background-color: #28e507;"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-option" style="background-color: #860303;"></div>
+                        <div class="color-option" style="background-color: #ff0000;"></div>
+                        <div class="color-option" style="background-color: #e205b2;"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-option" style="background-color: #c1c106;"></div>
+                        <div class="color-option" style="background-color: #e0bd0f;"></div>
+                        <div class="color-option" style="background-color: #ffff00;"></div>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-option" style="background-color: #ffffff;"></div>
+                        <div class="color-option" style="background-color: #aaa573;"></div>
+                        <div class="color-option" style="background-color: #513504;"></div>
+                    </div>
+                    <div id="advancedColor">
+                        <div id="currentColorDisplay"></div>
+                        <label id="colorIcon" for="colourInput">
+                            <input type="color" id="colourInput" value="#000000"/>
+                        </label>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <div class="mainSection" id="mainSection">
+            <!-- start button -->
+            <button id="startBtn">開始</button>
+            <!-- 等待其他成員 -->
+            <div id="wait-member">等待其他成員加入...</div>
+            <!-- 等待開始 -->
+            <div id="wait-start"></div>
+            <!-- 等待選擇 -->
+            <div id="round-start"></div>
+            <!-- 選擇題目 -->
+            <div id="choose-question">
+                <span class="choose-question-hint">輪到你了</span>
+                <div id="question-one" class="question-area">
+                    <span>Question One</span>
+                    <button class="question-button">選擇</button>
+                </div>
+                <div id="question-two" class="question-area">
+                    <span>Question Two</span>
+                    <button class="question-button">選擇</button>
+                </div>
+            </div>
+            <!-- 回合結束畫面 -->
+            <div id="round-over">中場休息</div>
+            <!-- 回合跳過畫面 -->
+            <div id="round-skip"></div>
+
+            <!-- 遊戲結束 -->
+            <div id="game-over">
+                <div class="annonucement">
+                    <span>Game Over<br>獲勝的是</span>
+                </div>
+                <div class="podium" id="podium">
+                  <div class="player second">
+                    <span class="name"></span>
+                    <span class="rank"></span>
+                    <span class="score"></span>
+                  </div>
+                  <div class="player first">
+                    <span class="name"></span>
+                    <span class="rank"></span>
+                    <span class="score"></span>
+                  </div>
+                  <div class="player third">
+                    <span class="name"></span>
+                    <span class="rank"></span>
+                    <span class="score"></span>
+                  </div>
+                </div>
+            </div>
+
+            <!-- 遊戲結束後等待其他成員 -->
+            <div id="game-over-wait-member">等待其他成員加入...</div>
+
+            <!-- 遊戲結束後等待開始 -->
+            <div id="game-over-wait-start"></div>
+
+            <!--re-start button -->
+            <button id="restartBtn">再來一局</button>
+
+            <!-- exit button -->
+            <label id="cross" for="exit-cross"></label>
+            <input type="checkbox" id="exit-cross" style="display: none;">
+            <div id="confirmation-dialog">
+                <p>確定要離開此房間嗎?</p>
+                <button id="confirm-yes">確定</button>
+                <button id="confirm-no">取消</button>
+            </div>
+
+            <canvas id="canvas" height="600" width="800"></canvas>
+
+            <div id="progressBar">
+                <div id="progressFill"></div>
+            </div>
+        </div>
+
+        <div id="sysChat">
+            <div id="name">猜題區</div>
+            <div id="overlay"></div>
+            <div id="sysChatContent">
+                <div id="sysPlaceholder" style="display: none;"></div> <!--為了新增訊息而用的div-->
+            </div>
+            <input type="text" placeholder="請輸入訊息" disabled>
+        </div>
+
+        <div id="publicChat">
+            <div id="name">聊天室</div>
+            <div id="publicChatContent">
+                <div id="publicPlaceholder" style="display: none;"></div>
+            </div>
+            <input type="text" placeholder="請輸入訊息">
+        </div>
+
+    </div>
+    <span id="clientName" style="display: none;">{{ .clientName }}</span> <!--把名字藏起來 但可以被js抓到-->
+    <!-- Connect to the WebSocket server --> 
+    <script>const socket = new WebSocket("ws://localhost:5000/room/{{ .roomID }}?clientIP={{ .clientIP }}&clientName={{ .clientName }}")</script>
+    <script src="static/index.js" defer></script>
 </body>
 </html>

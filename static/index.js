@@ -75,6 +75,7 @@ startBtn.addEventListener("click", GS);
 
 function GS() {
     console.log("GS")
+    isGameOver = false
     // reset score board
     Object.keys(scoreBoard).forEach(k => {
         scoreBoard[k] = 0
@@ -409,8 +410,9 @@ const thirdPlace = document.getElementById("podium").querySelector(".third")
 function gameStart(event) {
     console.log("CS")
     let question = event.target.previousElementSibling.innerText
+    let index = event.target.nextSibling.innerText
     console.log("Question:", question)
-    var jsonObject = {"Type":"CS", "Payload":{"Content":question}};
+    var jsonObject = {"Type":"CS", "Payload":{"Content":question + "@" + index}};
     var jsonString = JSON.stringify(jsonObject);
     socket.send(jsonString)   
     chooseQuestion.style.display = "none"
@@ -655,6 +657,13 @@ socket.onmessage = (event) => {
             numOfClients = jsonData.payload.content.split("```")[1]
             console.log("enter roomaster, current members:", numOfClients)
 
+            // display of toggle switch
+            if ( playerName === roomMaster ) {
+                toggleContainer.style.display = "flex"
+            } else {
+                toggleContainer.style.display = "none"
+            }
+
             // update score board
             playerBlocks.forEach( playerBlock => {
                 if ( playerBlock.querySelector(".name").innerText === roomMaster ) {
@@ -673,11 +682,11 @@ socket.onmessage = (event) => {
                         } else {
                             gameOverWaitStart.style.display = "none"
                             restartBtn.style.display = "none"
-                            gameOverWaitMember.style.display = "block"
+                            gameOverWaitMember.style.display = "flex"
                         }
                     } else {
-                        gameOverWaitStart.innerText =  "等待" + roomMaster + "開始"
-                        gameOverWaitStart.style.display = "block"
+                        gameOverWaitStart.innerHTML =  "等待<b>" + roomMaster + "</b>開始"
+                        gameOverWaitStart.style.display = "flex"
                     }
                 } else {
                     if (roomMaster === playerName) {
@@ -691,32 +700,20 @@ socket.onmessage = (event) => {
                         }
                     } else {
                         startBtn.style.display = "none"
-                        waitStart.innerText = "等待" + roomMaster + "開始"
+                        waitStart.innerHTML = "等待<b>" + roomMaster + "</b>開始"
                         waitStart.style.display = "flex"
                     }
                 }
-                
             }
 
             break
-        /*
+        
         case "GS": // Game Start => roomMaster press the start button
-            // 之後還會接收最大獲勝分數去init遊戲的結束條件
+            isGameOver = false
             console.log("GS")
-            cur_next_painter = jsonData.payload.content.split("@")
-            console.log(cur_next_painter[0], cur_next_painter[1])
-            
-            // 8 seconds to choose questions
-            window.requestAnimationFrame(timestamp => step(timestamp, 8000, RO));
-            break
-        */
-        case "RS": // Round Start
-            if (isGameOver) {
-                console.log("Game is Over, RS blocked by front end")
-                break 
-            }
-            console.log("RS")
             // 寄送GS之後回RS要設定遊戲開始
+            // clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
             isPlaying = true
             isGameOver = false
             gameOver.style.display = "none"
@@ -749,7 +746,61 @@ socket.onmessage = (event) => {
                 chooseQuestion.style.display = "flex"
             } else {
                 // 其餘玩家等待畫面
-                roundStart.innerText = "等待玩家" + cur_next_painter_and_questions[0] + "出題"
+                roundStart.innerHTML = "等待<b>" + cur_next_painter_and_questions[0] + "</b>出題"
+                roundStart.style.display = "flex"
+            }
+
+            
+            //window.requestAnimationFrame(timestamp => step(timestamp, 8000, RO)); // 8000ms
+            console.log("RS start counting")
+            countdownTimer(8, RSK, ticker)
+
+            break
+        
+        case "RS": // Round Start
+            if (isGameOver) {
+                console.log("Game is Over, RS blocked by front end")
+                break 
+            }
+            console.log("RS")
+            // 寄送GS之後回RS要設定遊戲開始
+            // clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            isPlaying = true
+            isGameOver = false
+            gameOver.style.display = "none"
+            restartBtn.style.display = "none"
+            gameOverWaitStart.style.display = "none"
+            gameOverWaitMember.style.display = "none"
+            waitMember.style.display = "none"
+            startBtn.style.display = "none"
+            waitStart.style.display = "none"
+            roundOver.style.display = "none"
+            roundSkip.style.display = "none"
+
+            cur_next_painter_and_questions = jsonData.payload.content.split("@")
+            console.log(cur_next_painter_and_questions[0], cur_next_painter_and_questions[1])
+
+            // update the painter icon
+            playerBlocks.forEach( playerBlock => {
+                if ( playerBlock.querySelector(".name").innerText === cur_next_painter_and_questions[0] ) {
+                    playerBlock.querySelector(".painter").style.display = "block"
+                } else {
+                    playerBlock.querySelector(".painter").style.display = "none"
+                }
+            })
+
+            // 畫家選擇 其餘玩家出現round start畫面
+            if (playerName === cur_next_painter_and_questions[0]) {
+                // shows up the options to choose
+                questionOne.querySelector("span").innerText = cur_next_painter_and_questions[2]
+                questionOne.querySelector("p").innerText = cur_next_painter_and_questions[3]
+                questionTwo.querySelector("span").innerText = cur_next_painter_and_questions[4]
+                questionTwo.querySelector("p").innerText = cur_next_painter_and_questions[5]
+                chooseQuestion.style.display = "flex"
+            } else {
+                // 其餘玩家等待畫面
+                roundStart.innerHTML = "等待<b>" + cur_next_painter_and_questions[0] + "</b>出題"
                 roundStart.style.display = "flex"
             }
 
@@ -878,11 +929,11 @@ socket.onmessage = (event) => {
                 } else {
                     restartBtn.style.display = "none"
                     gameOverWaitStart.style.display = "none"
-                    gameOverWaitMember.style.display = "block"
+                    gameOverWaitMember.style.display = "flex"
                 }
             } else {
-                gameOverWaitStart.innerText =  "等待" + roomMaster + "開始"
-                gameOverWaitStart.style.display = "block"
+                gameOverWaitStart.innerHTML =  "等待<b>" + roomMaster + "</b>開始"
+                gameOverWaitStart.style.display = "flex"
             }
             
             break
@@ -1093,5 +1144,73 @@ confirmNo.addEventListener('click', function () {
 overlayDiv.addEventListener('click', function () {
     exitCross.checked = false;
     confirmationDialog.style.display = 'none';
+    overlayDiv.style.display = 'none';
+});
+
+// toggle switch
+const toggleContainer = document.getElementById("toggle-container");
+const privacyToggle = document.getElementById("privacyToggle");
+const privacyStatus = document.getElementById("privacyStatus");
+
+function togglePrivacy() {
+    if (privacyToggle.checked) {
+        // Room is private
+        privacyStatus.innerText = "限邀請連結";
+        privacyStatus.style.color = "#e74c3c"; // Red color for 'Private'
+        var jsonObject = {"Type":"IN", "Payload":{"Content":"0"}};
+        var jsonString = JSON.stringify(jsonObject);
+        socket.send(jsonString)
+    } else {
+        // Room is public
+        privacyStatus.innerText = "房號/邀請連結";
+        privacyStatus.style.color = "#4CAF50"; // Green color for 'Public'
+        var jsonObject = {"Type":"IN", "Payload":{"Content":"1"}};
+        var jsonString = JSON.stringify(jsonObject);
+        socket.send(jsonString)
+    }
+}
+
+// exclamation mark
+const exclamationMarkCheck = document.getElementById("exclamationMarkCheck")
+const inviteLinkBox = document.getElementById("inviteLinkBox")
+const copyInviteLink = document.getElementById("copyInviteLink")
+
+exclamationMarkCheck.addEventListener('change', function () {
+    if (exclamationMarkCheck.checked) {
+        copyInviteLink.innerText = "複製"
+        inviteLinkBox.style.display = 'flex';
+        document.body.appendChild(overlayDiv);
+        overlayDiv.style.display = 'block';
+    } else {
+        inviteLinkBox.style.display = 'none';
+        overlayDiv.style.display = 'none';
+    }
+});
+
+copyInviteLink.addEventListener("click", function() {
+    var inviteLinkText = document.getElementById('inviteLink').innerText;
+
+    // Create a temporary textarea element to hold the text
+    var textarea = document.createElement('textarea');
+    textarea.value = inviteLinkText;
+    document.body.appendChild(textarea);
+
+    // Select the text in the textarea
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    // Copy the text to the clipboard
+    document.execCommand('copy');
+
+    // Remove the temporary textarea
+    document.body.removeChild(textarea);
+
+    copyInviteLink.innerText = "已複製"
+    
+})
+
+overlayDiv.addEventListener('click', function () {
+    exclamationMarkCheck.checked = false;
+    inviteLinkBox.style.display = 'none';
     overlayDiv.style.display = 'none';
 });

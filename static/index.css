@@ -2,7 +2,10 @@ html, body {
     height: 100%;
     margin: 0;
 }
+
 .container {
+    position: relative;
+    padding-top: 25px;
     height: 100%; /* Fill the height of the viewport */
     display: grid;
     grid-template-columns: repeat(9, 1fr);
@@ -10,12 +13,156 @@ html, body {
     gap: 10px;
     width: 70%;
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .container > * {
     border: 3px solid black;
 }
 
+/* Add this to your CSS */
+#toggle-container {
+    display: none;
+    position: absolute;
+    font-weight: bold;
+    top:-10px;
+    left:35%;
+    gap:5px;
+    align-items: center;
+    margin-top: 10px;
+    border: none;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 1px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #4CAF50;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #4CAF50;
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+/* Style for the privacy status */
+#privacyStatus {
+    margin-left: 10px;
+    font-weight: bold;
+    color: #4CAF50; /* Green color for 'Public' */
+}
+
+/* exclamation mark */
+#exclamationMark {
+    position: absolute;
+    left: 90%;
+    border: none;
+    background-image: url("exclamationMmark.webp");
+    background-repeat: no-repeat;
+    background-size: 25px, 25px;
+    width: 25px;
+    height: 25px;
+    box-sizing: border-box;
+    transition: transform 0.1s ease-in-out; /* Add transition property */
+}
+
+#exclamationMark:hover {
+    transform: scale(1.1); /* Scale up the cross on hover */
+}
+
+#exclamationMarkCheck {
+    display: none;
+}
+
+/* invite link box */
+#inviteLinkBox {
+    display: none;
+    position: fixed;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 450px;
+    height: 250px;
+    top: 50%;
+    left: 50%;
+    gap:10px;
+    transform: translate(-50%, -50%);
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    text-align: center;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+#inviteLinkBox span {
+    font-weight: bold;
+    font-size: 22px;
+}
+
+#inviteLinkBox button {
+    width: 100px;
+    min-height: 35px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#inviteLinkBox button {
+    background-color: #4CAF50;
+    font-weight: bolder;
+    color: white;
+}
+
+#inviteLinkBox button:hover {
+    opacity: 0.8;
+}
+
+/* side bar */
 #sideBar {
     display: grid;
     gap:3px;
@@ -43,28 +190,6 @@ html, body {
     border-bottom: 4px solid rgb(104, 104, 104, 0.3);
     box-sizing: border-box;
 }
-
-/*
-#memberBar {
-    grid-column-start: 1;
-    grid-column-end: 6;
-    border-radius: 10px;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(16, 1fr);
-    padding-right: 35px;
-}
-
-#memberBar > .playerBlock {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    grid-row: span 2;
-    grid-column-start: 1;
-    grid-column-end: 6;
-    border-bottom: 4px solid rgb(104, 104, 104, 0.3);
-}
-*/
 
 #memberBar > .lastPlayerBlock {
     border: none;
@@ -351,7 +476,6 @@ html, body {
 
 #wait-start {
     display: none;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
@@ -387,7 +511,6 @@ html, body {
 
 #round-start {
     display: none;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
@@ -609,7 +732,7 @@ html, body {
     background-size: 35px 35px; /* Fix the syntax error */
     width: 35px;
     height: 35px;
-    top: -1.5%;
+    top: -4.5%;
     right: -2%;
     transition: transform 0.1s ease-in-out; /* Add transition property */
     z-index: 200; /* 要比transition還上面 */
@@ -771,6 +894,8 @@ html, body {
 }
 
 .join-content {
+    max-width: 100%;
+    overflow-wrap: break-word;
     color: #b79f04;
     font-size: 22px;
     font-weight: bold;
@@ -785,6 +910,8 @@ html, body {
 }
 
 .leave-content {
+    max-width: 100%;
+    overflow-wrap: break-word;
     color: #b70404;
     font-size: 22px;
     font-weight: bold;
@@ -799,6 +926,8 @@ html, body {
 }
 
 .guess-content {
+    max-width: 100%;
+    overflow-wrap: break-word;
     color: #0ab704;
     font-size: 22px;
     font-weight: bold;
@@ -813,12 +942,16 @@ html, body {
 }
 
 .name-span {
+    max-width: 100%;
+    overflow-wrap: break-word;
     color: #444444;
     font-size: 22px;
     font-weight: bold;
 }
 
 .content-span {
+    max-width: 100%;
+    overflow-wrap: break-word;
     color: #5b5b5b;
     font-size: 20px;
 }

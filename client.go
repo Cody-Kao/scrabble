@@ -11,9 +11,9 @@ import (
 )
 
 type Client struct {
-	rL sync.RWMutex
+	rL *sync.RWMutex
 
-	wL sync.RWMutex
+	wL *sync.RWMutex
 
 	ip string
 
@@ -36,8 +36,8 @@ type Client struct {
 
 func newClient(clientIP, clientName string, socket *websocket.Conn, r *Room) *Client {
 	return &Client{
-		rL: sync.RWMutex{},
-		wL: sync.RWMutex{},
+		rL: &sync.RWMutex{},
+		wL: &sync.RWMutex{},
 
 		ip:                 clientIP,
 		name:               clientName,
@@ -62,9 +62,9 @@ func (c *Client) readMsg(wg *sync.WaitGroup) {
 	}()
 
 	for {
-		c.rL.Lock()
+		c.rL.RLock()
 		_, receivedMsg, err := c.con.ReadMessage()
-		c.rL.Unlock()
+		c.rL.RUnlock()
 
 		if err != nil {
 			fmt.Println("readMsg ERROR: ", err)
@@ -79,7 +79,7 @@ func (c *Client) readMsg(wg *sync.WaitGroup) {
 			return
 		}
 
-		if Msg.Type == "GS" || Msg.Type == "CS" || Msg.Type == "RO" || Msg.Type == "sys" || Msg.Type == "RSK" {
+		if Msg.Type == "IN" || Msg.Type == "GS" || Msg.Type == "CS" || Msg.Type == "RO" || Msg.Type == "sys" || Msg.Type == "RSK" {
 			c.room.gameControlChan <- &Msg
 			continue
 		}

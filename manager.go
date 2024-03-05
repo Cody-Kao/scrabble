@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sync"
 	"time"
 
@@ -45,12 +47,12 @@ func (m *Manager) run(ctx context.Context) {
 }
 
 const (
-	readBufferSize  = 1024
-	writeBufferSize = 1024
+	readBufferSize  = 2048
+	writeBufferSize = 2048
 )
 
 var upgrader = &websocket.Upgrader{ReadBufferSize: readBufferSize, WriteBufferSize: writeBufferSize}
-var codeChars string = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"
+var codeChars string = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"
 
 func generateRandomCode(length int) string {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -64,53 +66,73 @@ func generateRandomCode(length int) string {
 	return string(code)
 }
 
-/* 這是直接透過一個邀請網址加入的，難點在於需要建立使用者名稱以及取得使用者電腦IP
-func (m *Manager) getJoin(w http.ResponseWriter, req *http.Request) {
-	roomID := mux.Vars(req)["roomID"]
-	if _, ok := m.rooms[roomID]; !ok {
-		http.Redirect(w, req, "/", http.StatusSeeOther)
-		return
-	}
+func clientNameChecker(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Regular expression to match English letters, numbers, and Chinese characters
+		validPattern := regexp.MustCompile(`^[\p{L}0-9]+$`)
 
-	clientIP := "123456"
-	clientName := "test"
-	m.mu.Lock()
-	fmt.Println("enter lock")
-	r := m.rooms[roomID]
-	fmt.Println(m.rooms)
-	client := &Client{
-		//rL:      sync.RWMutex{},
-		//wL:      sync.RWMutex{},
-		ip:      clientIP,
-		name:    clientName,
-		receive: make(chan *Msg),
-		room:    r,
+		var clientNameCheckerError string
+		clientName := r.PostFormValue("clientName")
+		fmt.Println(clientName)
+		if clientName == "" {
+			clientNameCheckerError = "玩家姓名不得為空!"
+		} else if len([]rune(clientName)) > 7 {
+			clientNameCheckerError = "玩家姓名不得超過七個字元!"
+		} else if !validPattern.MatchString(clientName) {
+			// Check if the clientName matches the valid pattern
+			clientNameCheckerError = "玩家姓名含有非法字元!"
+		}
+
+		if clientNameCheckerError != "" {
+			// 取得上一頁網址 並捨棄query parameters
+			path := r.Header.Get("Referer")
+			if path == "" {
+				path = "/"
+			} else {
+				path = stripQueryParameters(r, path)
+			}
+			// 導回上一頁
+			redirectURL := fmt.Sprintf("%s?clientNameCheckerError=%s", path, url.QueryEscape(clientNameCheckerError))
+			http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+			return
+		}
+		next(w, r)
 	}
-	r.join <- client
-	fmt.Println("end lock")
-	m.mu.Unlock()
-	fmt.Println("roomID: ", roomID)
-	fmt.Println("room number: ", m.numOfRooms)
-	data := map[string]string{
-		"roomID":     roomID,
-		"clientIP":   clientIP,
-		"clientName": clientName,
-	}
-	drawTmp.Execute(w, data)
 }
-*/
 
 func (m *Manager) home(w http.ResponseWriter, r *http.Request) {
+	clientNameCheckerError := r.URL.Query().Get("clientNameCheckerError")
 	invalidRoomID := r.URL.Query().Get("invalidRoomID")
+	invalidLink := r.URL.Query().Get("invalidLink")
+	isInvited := r.URL.Query().Get("invalidRoute")
 	invalidClientIP := r.URL.Query().Get("invalidClientIP")
 	invalidClientName := r.URL.Query().Get("invalidClientName")
+	invalidJoin := r.URL.Query().Get("invalidJoin")
+	invalidNumOfPlayer := r.URL.Query().Get("invalidNumOfPlayer")
+	invalidOtpID := r.URL.Query().Get("invalidOtpID")
+
 	data := map[string]string{
-		"invalidRoomID":     invalidRoomID,
-		"invalidClientIP":   invalidClientIP,
-		"invalidClientName": invalidClientName,
+		"clientNameCheckerError": clientNameCheckerError,
+		"invalidRoomID":          invalidRoomID,
+		"invalidLink":            invalidLink,
+		"isInvited":              isInvited,
+		"invalidClientIP":        invalidClientIP,
+		"invalidClientName":      invalidClientName,
+		"invalidJoin":            invalidJoin,
+		"invalidNumOfPlayer":     invalidNumOfPlayer,
+		"invalidOtpID":           invalidOtpID,
 	}
 
 	homeTmp.Execute(w, data)
+}
+
+type EnterData struct {
+	RoomID          string // 讓每個成員都是exported，這樣template才吃的到
+	InviteLink      string
+	ClientIP        string
+	ClientName      string
+	MaxNumOfClients []int
+	BaseURL         string
 }
 
 // PRG pattern
@@ -118,17 +140,39 @@ func (m *Manager) enter(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("enter")
 	roomID := req.URL.Query().Get("roomID")
 	clientIP := req.URL.Query().Get("clientIP")
+	otpID := req.URL.Query().Get("otpID")
 	clientName := req.URL.Query().Get("clientName")
-	invalidJoin := req.URL.Query().Get("invalidJoin")
-	invalidNumOfPlayer := req.URL.Query().Get("invalidNumOfPlayer")
-	fmt.Println(roomID, clientIP, clientName, invalidJoin, invalidNumOfPlayer)
 
-	data := map[string]string{
-		"roomID":             roomID,
-		"clientIP":           clientIP,
-		"clientName":         clientName,
-		"invalidJoin":        invalidJoin,
-		"invalidNumOfPlayer": invalidNumOfPlayer,
+	var invalidRoomID, invalidOtpID string
+
+	if _, ok := m.rooms[roomID]; !ok {
+		invalidRoomID = "請輸入存在的房號!"
+		redirectURL := fmt.Sprintf("/?invalidRoomID=%s", url.QueryEscape(invalidRoomID))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+
+	r := m.rooms[roomID]
+
+	if _, ok := r.otp[otpID]; !ok {
+		invalidOtpID = "憑證錯誤或過期!"
+		redirectURL := fmt.Sprintf("/?invalidOtpID=%s", url.QueryEscape(invalidOtpID))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+
+	delete(r.otp, otpID)
+
+	fmt.Println(roomID, clientIP, otpID, clientName, r.maxNumOfClients)
+
+	encodedRoomID := base64.StdEncoding.EncodeToString([]byte(roomID))
+	data := EnterData{
+		RoomID:          roomID,
+		InviteLink:      "https://" + req.Host + "/invite/" + encodedRoomID,
+		ClientIP:        clientIP,
+		ClientName:      clientName,
+		MaxNumOfClients: make([]int, r.maxNumOfClients),
+		BaseURL:         req.Host,
 	}
 
 	drawTmp.Execute(w, data)
@@ -138,7 +182,7 @@ func (m *Manager) enter(w http.ResponseWriter, req *http.Request) {
 func (m *Manager) postCreateRoom(w http.ResponseWriter, req *http.Request) {
 	var roomID string
 	for {
-		roomID = generateRandomCode(6)
+		roomID = generateRandomCode(8)
 		if _, ok := m.rooms[roomID]; !ok {
 			break
 		}
@@ -146,14 +190,7 @@ func (m *Manager) postCreateRoom(w http.ResponseWriter, req *http.Request) {
 
 	fmt.Println("new roomID: ", roomID)
 	clientIP := req.PostFormValue("clientIP")
-	/*
-		clientIP, port, err := net.SplitHostPort(req.RemoteAddr)
-		if err != nil {
-			// Handle the error
-			fmt.Println("Error getting client IP:", err)
-			return
-		}
-	*/
+
 	clientName := req.PostFormValue("clientName")
 	fmt.Println(roomID, clientIP, clientName)
 
@@ -162,17 +199,36 @@ func (m *Manager) postCreateRoom(w http.ResponseWriter, req *http.Request) {
 	m.rooms[roomID] = r
 	m.numOfRooms += 1
 	fmt.Println("number of rooms: ", m.numOfRooms)
+
+	var otpID string
+	for {
+		otpID = generateRandomCode(8)
+		if _, ok := r.otp[otpID]; !ok {
+			r.otp[otpID] = nil
+			break
+		}
+	}
+
 	go r.run()
 
 	// Redirect to a GET request with the roomID, clientIP, clientName as a query parameter
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s", roomID, clientIP, clientName)
+	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&otpID=%s&clientName=%s",
+		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(otpID), url.QueryEscape(clientName))
 	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 }
 
 // 透過在大廳輸入房號加入他人房間
 func (m *Manager) postRoomIDJoin(w http.ResponseWriter, req *http.Request) {
-	var invalidRoomID, invalidClientIP, invalidClientName, invalidJoin, invalidNumOfPlayer string
 	roomID := req.PostFormValue("roomID")
+
+	clientIP := req.PostFormValue("clientIP")
+
+	clientName := req.PostFormValue("clientName")
+
+	fmt.Println("等待驗證", roomID, clientIP, clientName)
+
+	var invalidRoomID, invalidRoute, invalidJoin, invalidNumOfPlayer, invalidClientIP, invalidClientName string
+
 	if _, ok := m.rooms[roomID]; !ok {
 		invalidRoomID = "請輸入存在的房號!"
 		redirectURL := fmt.Sprintf("/?invalidRoomID=%s", url.QueryEscape(invalidRoomID))
@@ -181,6 +237,13 @@ func (m *Manager) postRoomIDJoin(w http.ResponseWriter, req *http.Request) {
 	}
 
 	r := m.rooms[roomID]
+
+	if r.isInvited {
+		invalidRoute = "該房間只透過邀請網址加入!"
+		redirectURL := fmt.Sprintf("/?invalidRoute=%s", url.QueryEscape(invalidRoute))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
 
 	if r.isPlaying {
 		invalidJoin = "該房間已開始遊戲!"
@@ -196,16 +259,6 @@ func (m *Manager) postRoomIDJoin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	clientIP := req.PostFormValue("clientIP")
-	/*
-		clientIP, port, err := net.SplitHostPort(req.RemoteAddr)
-		if err != nil {
-			// Handle the error
-			fmt.Println("Error getting client IP:", err)
-			return
-		}
-	*/
-	clientName := req.PostFormValue("clientName")
 	for _, client := range r.clients {
 		if clientIP == client.ip {
 			invalidClientIP = "請勿重複加入該房間!"
@@ -220,12 +273,131 @@ func (m *Manager) postRoomIDJoin(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
 	fmt.Println("驗證成功", roomID, clientIP, clientName)
 
-	// Redirect to a GET request with the roomID, clientIP, clientName as a query parameter
+	var otpID string
+	for {
+		otpID = generateRandomCode(8)
+		if _, ok := r.otp[otpID]; !ok {
+			r.otp[otpID] = nil
+			break
+		}
+	}
+
+	// Redirect to a GET request with the roomID, clientIP, clientName as query parameters
 	// 確保特殊字元不會出錯，所以用url.QueryEscape()包覆
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
-		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(clientName))
+	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&otpID=%s&clientName=%s",
+		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(otpID), url.QueryEscape(clientName))
+	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+}
+
+// 要把所有query parameters去掉可以用下列方法
+func stripQueryParameters(r *http.Request, path string) string {
+	if path == "" {
+		path = r.URL.Path
+	}
+	pathObject, _ := url.Parse(path)
+	return pathObject.Scheme + "://" + pathObject.Host + pathObject.Path
+}
+
+// 邀請連結畫面
+func (m *Manager) getInviteJoin(w http.ResponseWriter, req *http.Request) {
+	var clientNameCheckerError, invalidClientIP, invalidJoin, invalidNumOfPlayer, invalidClientName string
+	clientNameCheckerError = req.URL.Query().Get("clientNameCheckerError")
+	invalidClientName = req.URL.Query().Get("invalidClientName")
+	invalidClientIP = req.URL.Query().Get("invalidClientIP")
+	invalidJoin = req.URL.Query().Get("invalidJoin")
+	invalidNumOfPlayer = req.URL.Query().Get("invalidNumOfPlayer")
+	encodedRoomID := mux.Vars(req)["encodedRoomID"]
+	fmt.Println(encodedRoomID)
+
+	// 傳送encodedRoomID給template，並隱藏在hidden input裡面
+	data := map[string]string{
+		"clientNameCheckerError": clientNameCheckerError,
+		"invalidClientName":      invalidClientName,
+		"invalidClientIP":        invalidClientIP,
+		"invalidJoin":            invalidJoin,
+		"invalidNumOfPlayer":     invalidNumOfPlayer,
+		"encodedRoomID":          encodedRoomID,
+	}
+	inviteTmp.Execute(w, data)
+}
+
+// 透過邀請連結加入他人房間
+func (m *Manager) postInviteJoin(w http.ResponseWriter, req *http.Request) {
+	var invalidClientIP, invalidClientName, invalidLink, invalidJoin, invalidNumOfPlayer string
+	encodedRoomID := req.PostFormValue("encodedRoomID")
+	roomID, err := base64.StdEncoding.DecodeString(encodedRoomID) // type []byte
+
+	clientIP := req.PostFormValue("clientIP")
+
+	clientName := req.PostFormValue("clientName")
+
+	fmt.Println("等待驗證", roomID, clientIP, clientName)
+
+	// 解密roomID
+	if _, ok := m.rooms[string(roomID)]; !ok || err != nil {
+		invalidLink = "無效連結或已失效!"
+		redirectURL := fmt.Sprintf("/?invalidLink=%s", url.QueryEscape(invalidLink))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+
+	r := m.rooms[string(roomID)]
+
+	// 取得上一頁網址 並捨棄query parameters
+	path := req.Header.Get("Referer")
+	if path == "" {
+		path = "/"
+	} else {
+		path = stripQueryParameters(req, path)
+	}
+
+	if r.isPlaying {
+		invalidJoin = "該房間已開始遊戲!"
+		redirectURL := fmt.Sprintf("%s?invalidJoin=%s", path, url.QueryEscape(invalidJoin))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+
+	if r.numOfClients >= r.maxNumOfClients {
+		invalidNumOfPlayer = "該房間人數已達上限!"
+		redirectURL := fmt.Sprintf("%s?invalidNumOfPlayer=%s", path, url.QueryEscape(invalidNumOfPlayer))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+
+	for _, client := range r.clients {
+		if clientIP == client.ip {
+			invalidClientIP = "請勿重複加入該房間!"
+			redirectURL := fmt.Sprintf("%s?invalidClientIP=%s", path, url.QueryEscape(invalidClientIP))
+			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+			return
+		}
+		if clientName == client.name {
+			invalidClientName = "已有同名玩家在該房間!"
+			redirectURL := fmt.Sprintf("%s?invalidClientName=%s", path, url.QueryEscape(invalidClientName))
+			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+			return
+		}
+	}
+
+	fmt.Println("驗證成功", roomID, clientIP, clientName)
+
+	var otpID string
+	for {
+		otpID = generateRandomCode(8)
+		if _, ok := r.otp[otpID]; !ok {
+			r.otp[otpID] = nil
+			break
+		}
+	}
+
+	// Redirect to a GET request with the roomID, clientIP, clientName as query parameters
+	// 確保特殊字元不會出錯，所以用url.QueryEscape()包覆
+	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&otpID=%s&clientName=%s",
+		url.QueryEscape(string(roomID)), url.QueryEscape(clientIP), url.QueryEscape(otpID), url.QueryEscape(clientName))
 	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 }
 
@@ -276,103 +448,3 @@ func (m *Manager) serverWS(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("go wait")
 	wg.Wait()
 }
-
-/*
-type joinMsg struct {
-	roomID string
-	client *Client
-	msg    []byte
-}
-
-type leaveMsg struct {
-	roomID string
-	client *Client
-	msg    []byte
-}
-
-type Manager struct {
-	numOfRooms int
-	isEmpty    chan string
-	rooms      map[string]*Room
-	join       chan *joinMsg
-	leave      chan *leaveMsg
-}
-
-func newManager() *Manager {
-	return &Manager{
-		numOfRooms: 0,
-		isEmpty:    make(chan string),
-		rooms:      make(map[string]*Room),
-		join:       make(chan *joinMsg),
-		leave:      make(chan *leaveMsg),
-	}
-}
-
-func (m *Manager) run() {
-	for {
-		select {
-		case joinMsg := <-m.join:
-			m.rooms[joinMsg.roomID].join <- joinMsg.client
-			m.rooms[joinMsg.roomID].ChatArea <- []byte("new join")
-		case leaveMsg := <-m.leave:
-			m.rooms[leaveMsg.roomID].leave <- leaveMsg.client
-			m.rooms[leaveMsg.roomID].ChatArea <- []byte("someone is leaving")
-		case roomID := <-m.isEmpty:
-			m.numOfRooms -= 1
-			r := m.rooms[roomID]
-			close(r.join)
-			close(r.leave)
-			close(r.ChatArea)
-			delete(m.rooms, r.roomID)
-			if m.numOfRooms == 0 {
-				fmt.Println("All Rooms Are EMPTY")
-			}
-		}
-
-	}
-}
-
-const (
-	readBufferSize  = 1024
-	writeBufferSize = 1024
-)
-
-var upgrader = &websocket.Upgrader{ReadBufferSize: readBufferSize, WriteBufferSize: writeBufferSize}
-
-func (m *Manager) serverWS(w http.ResponseWriter, req *http.Request) {
-	roomID := mux.Vars(req)["roomID"]
-	fmt.Println(roomID)
-	socket, err := upgrader.Upgrade(w, req, nil)
-	if err != nil {
-		fmt.Println("Upgrade ERROR: ", err)
-	}
-	if _, ok := m.rooms[roomID]; !ok {
-		m.numOfRooms += 1
-		m.rooms[roomID] = newRoom(roomID)
-		r := m.rooms[roomID]
-		go r.run(m)
-	}
-	fmt.Println(m.rooms)
-	r := m.rooms[roomID]
-	r.manager = m
-	r.numOfClients += 1
-	client := &Client{
-		con:     socket,
-		receive: make(chan []byte),
-		room:    r,
-	}
-	//r.ChatArea <- []byte("new join")
-	joinMsg := &joinMsg{roomID: roomID, client: client, msg: []byte("new join")}
-	m.join <- joinMsg
-	defer func() {
-		//r.ChatArea <- []byte("someone is leaving")
-		leaveMsg := &leaveMsg{roomID: roomID, client: client, msg: []byte("someone is leaving")}
-		m.leave <- leaveMsg
-		client.con.Close()
-	}()
-	// 這裡要注意這兩行的寫法，相反會在關閉的時候出錯
-	go client.WriteMsg()
-	client.readMsg()
-
-}
-*/

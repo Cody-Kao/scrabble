@@ -9,88 +9,40 @@
 </head>
 <body>
     <div class="container" id="container">
+        <!-- toggle switch -->
+        <div id="toggle-container">
+            <span>加入方式</span>
+            <label class="switch">
+            <input type="checkbox" id="privacyToggle" onchange="togglePrivacy()">
+            <span class="slider"></span>
+            </label>
+            <span id="privacyStatus">房號/邀請連結</span>
+        </div>
+
+        <label for="exclamationMarkCheck" id="exclamationMark">
+            <input type="checkbox" name="exclamationMarkCheck" id="exclamationMarkCheck">
+        </label>
+
+        <div id="inviteLinkBox">
+            <span>邀請連結:</span>
+            <span id="inviteLink">{{ .InviteLink }}</span>
+            <button id="copyInviteLink">複製</button>
+        </div>
+
         <div class="sideBar" id="sideBar">
             <div id="memberBar">
-                <div class="playerBlock">
-                    <div class="status">
-                        <div class="painter"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master" style="display: none;">房主</div>
+                {{ range $index := .MaxNumOfClients }}
+                    <div class="playerBlock">
+                        <div class="status">
+                            <div class="painter" style="display: none;"></div>
+                            <div class="guessed" style="display: none;"></div>
+                            <div class="room-master" style="display: none;">房主</div>
+                        </div>
+                        <div class="profile"></div>
+                        <div class="name"></div> <!--英文最多十字--> <!--中文最多五字-->
+                        <div class="score"></div>
                     </div>
-                    <div class="profile"></div>
-                    <div class="name">A</div> <!--英文最多十字-->
-                    <div class="score">150</div>
-                </div>
-                <div class="playerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed"></div>
-                        <div class="room-master" style="display: none;">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">B</div> <!--中文最多五字-->
-                    <div class="score">120</div>
-                </div>
-                <div class="playerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">C</div>
-                    <div class="score">100</div>
-                </div>
-                <div class="playerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master" style="display: none;">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">D</div>
-                    <div class="score">100</div>
-                </div>
-                <div class="playerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master" style="display: none;">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">E</div>
-                    <div class="score">90</div>
-                </div>
-                <div class="playerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master" style="display: none;">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">F</div>
-                    <div class="score">10</div>
-                </div>
-                <div class="playerBlock emptyPlayerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master" style="display: none;">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">Empty</div>
-                    <div class="score"></div>
-                </div>
-                <div class="playerBlock lastPlayerBlock emptyPlayerBlock">
-                    <div class="status">
-                        <div class="painter" style="display: none;"></div>
-                        <div class="guessed" style="display: none;"></div>
-                        <div class="room-master" style="display: none;">房主</div>
-                    </div>
-                    <div class="profile"></div>
-                    <div class="name">Empty</div>
-                    <div class="score"></div>
-                </div>
+                {{ end }}
             </div>
             <div id="toolKit">
                 <div id="penStyle">
@@ -165,10 +117,12 @@
                 <div id="question-one" class="question-area">
                     <span>Question One</span>
                     <button class="question-button">選擇</button>
+                    <p style="display: none;"></p>
                 </div>
                 <div id="question-two" class="question-area">
                     <span>Question Two</span>
                     <button class="question-button">選擇</button>
+                    <p style="display: none;"></p>
                 </div>
             </div>
             <!-- 回合結束畫面 -->
@@ -214,8 +168,8 @@
             <input type="checkbox" id="exit-cross" style="display: none;">
             <div id="confirmation-dialog">
                 <p>確定要離開此房間嗎?</p>
-                <button id="confirm-yes">確定</button>
-                <button id="confirm-no">取消</button>
+                <button id="confirm-yes" class="yes">確定</button>
+                <button id="confirm-no" class="no">取消</button>
             </div>
 
             <canvas id="canvas" height="600" width="800"></canvas>
@@ -243,9 +197,10 @@
         </div>
 
     </div>
-    <span id="clientName" style="display: none;">{{ .clientName }}</span> <!--把名字藏起來 但可以被js抓到-->
+    <span id="clientName" style="display: none;">{{ .ClientName }}</span> <!--把名字藏起來 但可以被js抓到-->
     <!-- Connect to the WebSocket server --> 
-    <script>const socket = new WebSocket("ws://localhost:5000/room/{{ .roomID }}?clientIP={{ .clientIP }}&clientName={{ .clientName }}")</script>
     <script src="static/index.js" defer></script>
+    <!-- 之後production要改成wss://這樣才是走https的websocket -->
+    <script>const socket = new WebSocket("ws://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")</script>
 </body>
 </html>

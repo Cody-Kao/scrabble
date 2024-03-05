@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invite</title>
+    <link rel="stylesheet" type="text/css" href="/invite/static/invite.css">
+</head>
+<body>
+    {{ if .invalidClientIP }}
+        <div id="custom-alert"> 
+            <p id="alert-message">{{ .invalidClientIP }}</p>
+            <button onclick="hideAlert()">知道了</button>
+        </div>
+    {{ else if .invalidClientName }}
+        <div id="custom-alert"> 
+            <p id="alert-message">{{ .invalidClientName }}</p>
+            <button onclick="hideAlert()">知道了</button>
+        </div>
+    {{ else if .invalidJoin }}
+        <div id="custom-alert"> 
+            <p id="alert-message">{{ .invalidJoin }}</p>
+            <button onclick="hideAlert()">知道了</button>
+        </div>
+    {{ else if .invalidNumOfPlayer }}
+        <div id="custom-alert"> 
+            <p id="alert-message">{{ .invalidNumOfPlayer }}</p>
+            <button onclick="hideAlert()">知道了</button>
+        </div>
+    {{ else if .clientNameCheckerError }}
+        <div id="custom-alert"> 
+            <p id="alert-message">{{ .clientNameCheckerError }}</p>
+            <button onclick="hideAlert()">知道了</button>
+        </div>
+    {{ end }}
+    <div id="main-section" class="main-section">
+        <div id="options" class="options">
+            <div id="joinFormOption" class="option selected">加入房間</div>
+        </div>
+        
+        <div id="form-area" class="form-area">
+            <div class="form-container" id="joinForm">
+                <form action="/inviteJoin" method="POST">
+                    <label for="clientName">Your Name:
+                        <input type="text" id="clientName" name="clientName">
+                    </label>
+                    <input type="submit" value="加入">
+                    <input type="hidden" id="clientIP" name="clientIP" value="">
+                    <input type="hidden" id="encodedRoomID" name="encodedRoomID" value="{{ .encodedRoomID }}">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // alert
+        const customAlert = document.getElementById('custom-alert');
+        function hideAlert() {
+            customAlert.style.display = "none"
+        }
+
+        const joinForm = document.getElementById("joinForm")
+        // get user ip
+        function getIP() {
+            fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => {
+                joinForm.querySelector("#clientIP").value = data.ip
+                console.log(data.ip);
+            })
+            .catch(error => {
+                console.log('Error:', error);
+            });
+        }
+
+        getIP()
+    </script>
+</body>
+</html>

@@ -22,6 +22,7 @@ type Room struct {
 	isPlaying       bool
 	isRoundOver     bool
 	isGameOver      bool // 如果有人在RO的中途離開，造成GO，就必須讓RS不能在4秒後送出
+	isInvited       bool
 	curPainterExit  bool // 記住這一輪是否有畫家中途離開
 	roomID          string
 	answer          string
@@ -32,6 +33,7 @@ type Room struct {
 	clients         map[string]*Client
 	guessRight      map[string]interface{}
 	questionRecord  *map[int]interface{}
+	otp             map[string]interface{}
 	roomMaster      *clientNode
 	curPainter      *clientNode
 	join            chan *Client
@@ -70,6 +72,7 @@ func newRoom(id string, ctx context.Context, cancel context.CancelFunc) *Room {
 		isPlaying:       false,
 		isRoundOver:     false,
 		isGameOver:      false,
+		isInvited:       false,
 		curPainterExit:  false,
 		roomID:          id,
 		answer:          "",
@@ -80,6 +83,7 @@ func newRoom(id string, ctx context.Context, cancel context.CancelFunc) *Room {
 		clients:         make(map[string]*Client),
 		guessRight:      make(map[string]interface{}),
 		questionRecord:  &map[int]interface{}{},
+		otp:             make(map[string]interface{}),
 		join:            make(chan *Client, 10),
 		leave:           make(chan *Client, 10),
 		BroadcastArea:   make(chan *Msg, 100),
@@ -110,11 +114,13 @@ func (r *Room) RS() {
 	}
 	// use "@" as a delimitor, so the clientName can not contain "@"
 	// 記得要順便送出題目選項
-	r.mu.RLock()
+	fmt.Println("Start getting questions")
 	q1, q2 := getQuestions(&category, r.questionRecord)
+	fmt.Println("Stop getting questions")
+	r.mu.RLock()
 	r.BroadcastArea <- &Msg{Type: "RS", Payload: Data{Content: fmt.Sprintf("%s@%s@%s@%s", r.curPainter.clientName, r.curPainter.next.clientName, q1, q2)}}
-	r.isRoundOver = false
 	r.mu.RUnlock()
+	r.isRoundOver = false
 }
 
 func (r *Room) RO(t string) {
@@ -376,7 +382,13 @@ func (r *Room) run() {
 		*/
 		case signal := <-r.gameControlChan:
 			r.mu.RLock()
-			if string(signal.Type) == "RO" { // RO => Round Over
+			if signal.Type == "IN" {
+				if signal.Payload.Content == "0" {
+					r.isInvited = true
+				} else {
+					r.isInvited = false
+				}
+			} else if string(signal.Type) == "RO" { // RO => Round Over
 				// 優先計算並記錄畫家出題者這回合的得分
 				r.isRoundOver = true
 				painter := r.clients[r.curPainter.clientName]
@@ -410,10 +422,16 @@ func (r *Room) run() {
 				// use "@" as a delimitor, so the clientName can not contain "@"
 				// 記得要順便送出題目選項
 				fmt.Printf("print: %s@%s\n", r.curPainter.clientName, r.curPainter.next.clientName)
+				fmt.Println("Start getting questions")
 				q1, q2 := getQuestions(&category, r.questionRecord)
-				r.BroadcastArea <- &Msg{Type: "RS", Payload: Data{Content: fmt.Sprintf("%s@%s@%s@%s", r.curPainter.clientName, r.curPainter.next.clientName, q1, q2)}}
+				fmt.Println("Stop getting questions")
+				r.BroadcastArea <- &Msg{Type: "GS", Payload: Data{Content: fmt.Sprintf("%s@%s@%s@%s", r.curPainter.clientName, r.curPainter.next.clientName, q1, q2)}}
 			} else if string(signal.Type) == "CS" {
-				r.answer = signal.Payload.Content
+				answerAndIndex := strings.Split(signal.Payload.Content, "@")
+				r.answer = answerAndIndex[0]
+				index, _ := strconv.Atoi(answerAndIndex[1])
+				// 把題目的index註冊掉，這樣有畫過題目就不會重複出現
+				(*r.questionRecord)[index] = nil
 				fmt.Println(r.answer)
 				r.BroadcastArea <- &Msg{Type: "CS"}
 			} else if string(signal.Type) == "sys" { // sys means players input at the answer area
@@ -502,6 +520,7 @@ func (r *Room) reset() {
 	r.answer = ""
 	r.guessRight = map[string]interface{}{}
 	r.questionRecord = &map[int]interface{}{}
+	r.otp = map[string]interface{}{}
 	for len(r.join) > 0 {
 		<-r.join
 	}

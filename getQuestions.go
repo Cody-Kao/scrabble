@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -16,7 +17,6 @@ func getRandomIndex(numOfelements int, questionRecord *map[int]interface{}) int 
 		// if numOfelements == 10, it generates a random number of index between 0 and 9
 		randomindex = rng.Intn(numOfelements)
 		if _, ok := (*questionRecord)[randomindex]; !ok {
-			(*questionRecord)[randomindex] = nil
 			break
 		}
 	}
@@ -40,5 +40,5 @@ func getQuestions(category *map[string][]string, questionRecord *map[int]interfa
 	}
 	fmt.Println((*category)["動物"][l], (*category)["動物"][r])
 
-	return (*category)["動物"][l], (*category)["動物"][r]
+	return (*category)["動物"][l] + "@" + strconv.Itoa(l), (*category)["動物"][r] + "@" + strconv.Itoa(r)
 }

@@ -1,0 +1,117 @@
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f5f5f5; /* Add a background color for better aesthetics */
+}
+
+.main-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 300px; /* Set the width of the square */
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background-color: #fff; /* Set background color for the main section */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Add a subtle box shadow */
+    overflow: hidden; /* Hide overflow content during transition */
+}
+
+.options {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.option {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.selected {
+    background-color: #f0f0f0;
+    font-weight: bold; /* Highlight the option on hover or when selected */
+}
+
+.form-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    width: 100%;
+    opacity: 1;
+}
+
+.form-container form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    opacity: 1;
+    width: 100%;
+}
+
+.form-container input {
+    margin-bottom: 10px;
+    padding: 8px;
+    width: 100%;
+}
+
+/* Add some styling to form elements */
+.form-container label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.form-container input[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+    width: 80%; /* Make submit button take up 80% width */
+}
+
+.form-container input[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+#custom-alert {
+    position: fixed;
+    width: 200px;
+    height: 120px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 20px;
+    font-weight: bold;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    text-align: center;
+    opacity: 1;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+}

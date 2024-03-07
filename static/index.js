@@ -742,7 +742,9 @@ socket.onmessage = (event) => {
             if (playerName === cur_next_painter_and_questions[0]) {
                 // shows up the options to choose
                 questionOne.querySelector("span").innerText = cur_next_painter_and_questions[2]
-                questionTwo.querySelector("span").innerText = cur_next_painter_and_questions[3]
+                questionOne.querySelector("p").innerText = cur_next_painter_and_questions[3]
+                questionTwo.querySelector("span").innerText = cur_next_painter_and_questions[4]
+                questionTwo.querySelector("p").innerText = cur_next_painter_and_questions[5]
                 chooseQuestion.style.display = "flex"
             } else {
                 // 其餘玩家等待畫面
@@ -826,7 +828,7 @@ socket.onmessage = (event) => {
             // Start the countdown with a customized duration
             //window.requestAnimationFrame(timestamp => step(timestamp, 90000, RO));
             console.log("CS start counting")
-            countdownTimer(12, RO, ticker)
+            countdownTimer(90, RO, ticker)
             break
 
         case "RO": // Round Over

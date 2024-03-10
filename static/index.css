@@ -20,6 +20,50 @@ html, body {
     border: 3px solid black;
 }
 
+/* disconnection box */
+#disconnectBox {
+    display: none;
+    position: fixed;
+    width: 300px;
+    height: 150px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffffff;
+    border-color: #b70404;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    text-align: center;
+    border-radius: 10px;
+}
+
+#disconnectBox p {
+    font-weight: bold;
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+#disconnectBox button {
+    width: 100px;
+    padding: 10px;
+    margin: 0 10px; /* Add margin to separate buttons */
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#disconnectBox button.yes {
+    background-color: #4CAF50;
+    font-weight: bolder;
+    color: white;
+}
+
+#disconnectBox button:hover {
+    opacity: 0.8;
+}
+
 /* Add this to your CSS */
 #toggle-container {
     display: none;
@@ -98,7 +142,7 @@ input:checked + .slider:before {
     position: absolute;
     left: 90%;
     border: none;
-    background-image: url("exclamationMmark.webp");
+    background-image: url("exclamationMark.png");
     background-repeat: no-repeat;
     background-size: 25px, 25px;
     width: 25px;
@@ -238,16 +282,128 @@ input:checked + .slider:before {
 }
 
 .playerBlock > .profile {
+    position: relative;
     grid-column-start: 2;
     grid-column-end: 4;
     grid-row-start: 1;
     grid-row-end: 3;
-    background-image: url("profile.webp");
+    background-image: url("profile.png");
     background-repeat: no-repeat;
     width: 100%;
     height: 100%;
     background-size: 60px 60px;
     background-position: center; /* Center the background image */
+}
+
+.profile-overlay {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(165, 164, 164, 0.5); /* Use rgba with alpha channel */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 70%;
+    display: none;
+}
+
+.kick-cross {
+    position: absolute;
+    opacity: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #000000; /* Change color as needed */
+    background-image: url("cross.png");
+    width: 35px;
+    height: 35px;
+    background-size: 35px, 35px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.enable-hover-profile:hover .profile-overlay {
+    display: block;
+}
+
+/* kick box */
+#kickBox {
+    display: none;
+    position: fixed;
+    width: 300px;
+    height: 120px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    text-align: center;
+    border-radius: 10px;
+}
+
+#kickBox p {
+    font-weight: bold;
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+#kickName {
+    color: #946005;
+    font-size: 25px;
+    font-weight: bold;
+}
+
+#kickBox button {
+    width: 100px;
+    padding: 10px;
+    margin: 0 10px; /* Add margin to separate buttons */
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#kickBox button.yes {
+    background-color: #4CAF50;
+    font-weight: bolder;
+    color: white;
+}
+
+#kickBox button.no {
+    background-color: #f44336;
+    font-weight: bolder;
+    color: white;
+}
+
+#kickBox button:hover {
+    opacity: 0.8;
+}
+
+/* msg box for denial of kicking */
+#floatingMessageBox {
+    position: fixed;
+    top: 0;
+    left: 60%;
+    transform: translateX(-50%);
+    background-color: #67bbf3;
+    color: #000000;
+    font-weight: bold;
+    padding: 10px;
+    text-align: center;
+    width: 200px;
+    z-index: 100000; /* above everything */
+    transition: opacity 0.4s ease-in-out;
+}
+
+.box-hidden {
+    opacity: 0;
+}
+
+.box-visible {
+    opacity: 0.8;
 }
 
 .playerBlock > .name {
@@ -264,6 +420,11 @@ input:checked + .slider:before {
     color: #000;
     font-family:monospace, Arial, Helvetica, sans-serif;
     white-space: nowrap;
+    padding-left: 12px;
+}
+
+.playerBlock > .nameEmphasis {
+    text-shadow: rgb(229, 184, 3) 1px 0 10px;;
 }
 
 .playerBlock > .score {
@@ -281,12 +442,31 @@ input:checked + .slider:before {
     font-family:monospace, Arial, Helvetica, sans-serif;
 }
 
+/*
 #toolKit {
     grid-column-start: 6;
     grid-column-end: 7 ;
     display: grid;
     grid-template-rows: repeat(8, 1fr);
     padding-right: 12px;
+}
+*/
+
+#toolKit {
+    grid-column-start: 6;
+    grid-column-end: 7;
+    display: grid;
+    border-left: 2px solid #000;
+    grid-template-rows: repeat(8, 1fr);
+    padding-right: 12px;
+    padding-left: 12px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.toolKitVisible {
+    transform: scaleX(1) !important;
 }
 
 #penStyle {
@@ -319,7 +499,7 @@ input:checked + .slider:before {
 }
 
 #penStyle > #pen {
-    background-image: url("pen.webp");
+    background-image: url("pen.png");
 }
 
 #penStyle > #crayon {
@@ -876,8 +1056,8 @@ input:checked + .slider:before {
 }
    
   /* Handle */
-*::-webkit-scrollbar-thumb{
-    background: #c1c1c1; 
+  *::-webkit-scrollbar-thumb{
+    background: #d6d6d6; 
     border-radius: 10px; /* roundness of the thumb */
 }
   

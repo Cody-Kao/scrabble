@@ -9,6 +9,15 @@
 </head>
 <body>
     <div class="container" id="container">
+        <!-- disconnectBox -->
+        <div id="disconnectBox">
+            <p>您已因閒置/房主被踢出房間<br>如是遇到連線問題歡迎來信詢問!<br>gg1671821@gmail.com</p>
+            <button id="disconnectBoxConfirmYes" class="yes">確定</button>
+        </div>
+        <!-- msg box for denial of kicking -->
+        <div id="floatingMessageBox" class="box-hidden">
+            你必須是房主才有權限
+        </div>
         <!-- toggle switch -->
         <div id="toggle-container">
             <span>加入方式</span>
@@ -29,17 +38,29 @@
             <button id="copyInviteLink">複製</button>
         </div>
 
+        <div id="kickBox">
+            <p>確定要踢出玩家 <span id="kickName"></span></p>
+            <button id="kickConfirmYes" class="yes">確定</button>
+            <button id="kickConfirmNo" class="no">取消</button>
+        </div>
+
         <div class="sideBar" id="sideBar">
             <div id="memberBar">
-                {{ range $index := .MaxNumOfClients }}
+                {{ range $index, $_ := .MaxNumOfClients }}
                     <div class="playerBlock">
                         <div class="status">
                             <div class="painter" style="display: none;"></div>
                             <div class="guessed" style="display: none;"></div>
                             <div class="room-master" style="display: none;">房主</div>
                         </div>
-                        <div class="profile"></div>
-                        <div class="name"></div> <!--英文最多十字--> <!--中文最多五字-->
+                        <div class="profile enable-hover-profile">
+                            <div class="profile-overlay">
+                                <!--注意每個checkbox的id不能重複-->
+                                <label for="profileCheckbox{{ $index }}" class="kick-cross"></label>
+                                <input type="checkbox" id="profileCheckbox{{ $index }}" class="profileCheckbox" style="display: none;"></input>
+                            </div>
+                        </div>
+                        <div class="name"></div> <!--最多七字-->
                         <div class="score"></div>
                     </div>
                 {{ end }}
@@ -198,9 +219,12 @@
 
     </div>
     <span id="clientName" style="display: none;">{{ .ClientName }}</span> <!--把名字藏起來 但可以被js抓到-->
+    <span id="BaseURL" style="display: none;">{{ .BaseURL }}</span> <!-- 把baseURL藏起來 但可被js抓到 -->
     <!-- Connect to the WebSocket server --> 
     <script src="static/index.js" defer></script>
     <!-- 之後production要改成wss://這樣才是走https的websocket -->
-    <script>const socket = new WebSocket("wss://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")</script>
+    <script>
+        const socket = new WebSocket("ws://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
+    </script>
 </body>
 </html>

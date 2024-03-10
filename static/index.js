@@ -1,6 +1,21 @@
 const playerName = document.getElementById("clientName").innerText; // 抓取玩家名字
 let isPlaying = false
 let numOfClients
+
+// function and variable to implement the idle detector
+var idleTimerID;
+
+function startIdleTimer() {
+    idleTimerID = setTimeout(()=>{
+        socket.close()
+    }, 5*60*1000) // 五分鐘
+}
+// start idel timer
+startIdleTimer()
+
+// toolkit
+const toolKit = document.getElementById("toolKit");
+
 // Add an event listener to the color input
 const colorInput = document.getElementById('colourInput');
 colorInput.addEventListener('input', updateCurrentColor);
@@ -100,8 +115,14 @@ const RSK = () => {
     var jsonObject = {"Type":"RSK"};
     var jsonString = JSON.stringify(jsonObject);
     if (playerName == cur_next_painter_and_questions[0]) {
-        socket.send(jsonString)   
-    }
+        // 連續三次RSK直接踢掉
+        numOfRSK+=1
+        if (numOfRSK === 3) {
+            socket.close();
+        } else {
+            socket.send(jsonString)   
+        }
+    } 
 }
 
 const defaultStroke = (origin, destination, color, strokeWidth) => {
@@ -407,8 +428,12 @@ const firstPlace = document.getElementById("podium").querySelector(".first")
 const secondPlace = document.getElementById("podium").querySelector(".second")
 const thirdPlace = document.getElementById("podium").querySelector(".third")
 
+// variables to control idle
+let numOfRSK = 0;
+
 function gameStart(event) {
     console.log("CS")
+    numOfRSK = 0;
     let question = event.target.previousElementSibling.innerText
     let index = event.target.nextSibling.innerText
     console.log("Question:", question)
@@ -600,6 +625,7 @@ socket.onmessage = (event) => {
 
             playerBlocks.forEach(playerBlock => {
                 // get all child elements
+                const profile = playerBlock.querySelector(".profile")
                 const playerNameElement = playerBlock.querySelector(".name");
                 const playerScoreElement = playerBlock.querySelector(".score");
                 const painterDiv = playerBlock.querySelector(".painter");
@@ -613,6 +639,16 @@ socket.onmessage = (event) => {
                     // reset the name and score
                     playerNameElement.innerText = nameScoreArray[i][0]
                     playerScoreElement.innerText = nameScoreArray[i][1]
+
+                    if (playerNameElement.innerText === playerName) {
+                        profile.classList.remove("enable-hover-profile")
+                        playerNameElement.classList.add("nameEmphasis")
+                        console.log("same name")
+                    } else {
+                        profile.classList.add("enable-hover-profile")
+                        playerNameElement.classList.remove("nameEmphasis")
+                        console.log("not same name")
+                    }
 
                     if (playerNameElement.innerText === cur_next_painter_and_questions[0]) {
                         painterDiv.style.display = "block"
@@ -634,6 +670,7 @@ socket.onmessage = (event) => {
 
                     i+=1
                 } else {
+                    profile.classList.remove("enable-hover-profile")
                     playerBlock.classList.add("emptyPlayerBlock")
                     
                     // reset the name and score
@@ -708,9 +745,18 @@ socket.onmessage = (event) => {
 
             break
         
+        case "K":
+            // got kicked out
+            if (playerName == jsonData.payload.content) {
+                socket.close()
+            }
+        
         case "GS": // Game Start => roomMaster press the start button
             isGameOver = false
             console.log("GS")
+            // stop idle timer
+            clearTimeout(idleTimerID)
+
             // 寄送GS之後回RS要設定遊戲開始
             // clear canvas
             context.clearRect(0, 0, canvas.width, canvas.height);
@@ -823,6 +869,8 @@ socket.onmessage = (event) => {
             if (playerName != cur_next_painter_and_questions[0]) {
                 sysChatInput.disabled = false
                 overlay.style.display = "none"
+            } else {
+                toolKit.classList.add("toolKitVisible")
             }
 
             // Start the countdown with a customized duration
@@ -887,6 +935,8 @@ socket.onmessage = (event) => {
 
         case "GO":
             console.log("GO")
+            startIdleTimer()
+            numOfRSK = 0
             isPlaying = false
             // reset cur_next_painter_and_questions
             cur_next_painter_and_questions = ["", "", "", ""]
@@ -942,12 +992,34 @@ socket.onmessage = (event) => {
     }
 }
 
+function backToHomePage() {
+    window.location.replace("https://" + BaseURL);
+}
+
+const BaseURL = document.getElementById("BaseURL").innerText
+// 處理中斷連線(有可能是server問題或是被踢出)
+socket.addEventListener("close", (event)=>{
+    const disconnectOverlayDiv = document.createElement('div');
+    disconnectOverlayDiv.classList.add('overlay-div');
+    disconnectOverlayDiv.style.display = "block"
+    document.body.appendChild(disconnectOverlayDiv)
+    
+    const disconnectBox = document.getElementById("disconnectBox")
+    disconnectBox.style.display = "block"
+
+    const disconnectBoxConfirmYes = document.getElementById("disconnectBoxConfirmYes")
+    // 導回home頁面
+    disconnectBoxConfirmYes.addEventListener("click", backToHomePage)
+})
+
 // 處理回合結束的reset
 function reset() {
     // stop the previous clock
     stopCountingDown()
     // reset progress bar
     resetProgressBar()
+    // hide the toolkit
+    toolKit.classList.remove("toolKitVisible")
     // clear canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
     // reset the color options and current color
@@ -1101,6 +1173,11 @@ sysChatInput.addEventListener('keydown', (event) => {
 
 publicChatInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && publicChatInput.value.trim() != "") { 
+        if ( !isPlaying ) {
+            clearTimeout(idleTimerID)
+            startIdleTimer()
+        }
+
         event.preventDefault()
         console.log('User submitted from publicChatInput:', publicChatInput.value)
         const stamp = timeStamp()
@@ -1214,5 +1291,74 @@ copyInviteLink.addEventListener("click", function() {
 overlayDiv.addEventListener('click', function () {
     exclamationMarkCheck.checked = false;
     inviteLinkBox.style.display = 'none';
+    overlayDiv.style.display = 'none';
+});
+
+// kick out player
+const kickCross = document.querySelectorAll('.profileCheckbox');
+const kickBox = document.getElementById('kickBox');
+const kickConfirmYes = document.getElementById('kickConfirmYes');
+const kickConfirmNo = document.getElementById('kickConfirmNo');
+const kickName = document.getElementById('kickName');
+overlayDiv.classList.add('overlay-div');
+
+const floatingMessageBox = document.getElementById('floatingMessageBox');
+
+function showFloatingMessage() {
+    floatingMessageBox.classList.remove('box-hidden');
+    floatingMessageBox.classList.add('box-visible');
+
+    setTimeout(() => {
+        hideFloatingMessage();
+    }, 3000);
+}
+
+function hideFloatingMessage() {
+    floatingMessageBox.classList.remove('box-visible');
+    floatingMessageBox.classList.add('box-hidden');
+}
+
+function clickKickCheck(target) {
+    if (target.checked) {
+        let playerName = target.closest('.playerBlock').querySelector('.name').innerText;
+        console.log(playerName)
+        kickName.innerText = playerName;
+        kickBox.style.display = 'block';
+        document.body.appendChild(overlayDiv);
+        overlayDiv.style.display = 'block';
+    } else {
+        kickBox.style.display = 'none';
+        overlayDiv.style.display = 'none';
+    }
+}
+
+Array.from(kickCross).forEach(checkbox => {
+    checkbox.addEventListener('change', () => clickKickCheck(checkbox));
+});
+
+kickConfirmYes.addEventListener('click', function () {
+    // Add your code for "Yes" confirmation here
+    Array.from(kickCross).forEach(e=>{e.checked = false;}) // Uncheck the checkbox
+    kickBox.style.display = 'none';
+    overlayDiv.style.display = 'none';
+    if (playerName === roomMaster) {
+        var jsonObject = {"Type":"K", "Payload":{"Content":kickName.innerText}};
+        var jsonString = JSON.stringify(jsonObject);
+        socket.send(jsonString)
+    } else {
+        showFloatingMessage();
+    }
+});
+
+kickConfirmNo.addEventListener('click', function () {
+    // Add your code for "No" confirmation here
+    Array.from(kickCross).forEach(e=>{e.checked = false;}) // Uncheck the checkbox
+    kickBox.style.display = 'none';
+    overlayDiv.style.display = 'none';
+});
+
+overlayDiv.addEventListener('click', function () {
+    Array.from(kickCross).forEach(e=>{e.checked = false;})
+    kickBox.style.display = 'none';
     overlayDiv.style.display = 'none';
 });

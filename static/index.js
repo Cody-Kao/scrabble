@@ -366,6 +366,7 @@ function mouseEvent(event) {
 
     if (event.type === "mousedown" && event.target === canvas) {
         drawing = true;
+        questionMemo.style.display = "none";
         progressFill.style.opacity = "30%";
         console.log("mouseDown")
         latestPoint = [mouse.x, mouse.y]
@@ -383,7 +384,7 @@ function mouseEvent(event) {
     }
 }
 
-const endStroke = () => {console.log("endStroke"); drawing = false; progressFill.style.opacity = "50%";}
+const endStroke = () => {console.log("endStroke"); drawing = false; progressFill.style.opacity = "50%"; questionMemo.style.display = "block";}
 canvas.addEventListener("mousemove", mouseEvent);
 canvas.addEventListener("mousedown", mouseEvent);
 canvas.addEventListener("mouseup", endStroke);
@@ -427,6 +428,7 @@ restartBtn.addEventListener("click", GS)
 const firstPlace = document.getElementById("podium").querySelector(".first")
 const secondPlace = document.getElementById("podium").querySelector(".second")
 const thirdPlace = document.getElementById("podium").querySelector(".third")
+const questionMemo = document.getElementById("questionMemo")
 
 // variables to control idle
 let numOfRSK = 0;
@@ -435,6 +437,8 @@ function gameStart(event) {
     console.log("CS")
     numOfRSK = 0;
     let question = event.target.previousElementSibling.innerText
+    questionMemo.innerText = question
+    questionMemo.style.display = "block"
     let index = event.target.nextSibling.innerText
     console.log("Question:", question)
     var jsonObject = {"Type":"CS", "Payload":{"Content":question + "@" + index}};
@@ -1031,7 +1035,10 @@ function reset() {
     // reset pen style
     penStyle = 1
     allPenStyle.forEach(pen => { if (pen.id == "pen") { pen.classList.add('selected') } else { pen.classList.remove('selected') } });
-    
+    // make questionMemo disappear
+    questionMemo.innerText = ""
+    questionMemo.style.display = "none"
+
     // lock and reset the sysChat
     sysChatInput.value = ""
     sysChatInput.disabled = true

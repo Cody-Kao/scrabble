@@ -20,6 +20,22 @@ html, body {
     border: 3px solid black;
 }
 
+/* questionMemo */
+#questionMemo {
+    display: none;
+    position: absolute;
+    width: 80px;
+    height: 30px;
+    top: 3%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
 /* disconnection box */
 #disconnectBox {
     display: none;
@@ -396,13 +412,16 @@ input:checked + .slider:before {
     width: 200px;
     z-index: 100000; /* above everything */
     transition: opacity 0.4s ease-in-out;
+    transition: display 0.4s ease-in-out;
 }
 
 .box-hidden {
+    display: none;
     opacity: 0;
 }
 
 .box-visible {
+    display: block;
     opacity: 0.8;
 }
 

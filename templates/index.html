@@ -124,6 +124,8 @@
         
 
         <div class="mainSection" id="mainSection">
+            <!-- 題目提示 -->
+            <div id="questionMemo"></div>
             <!-- start button -->
             <button id="startBtn">開始</button>
             <!-- 等待其他成員 -->
@@ -224,7 +226,7 @@
     <script src="static/index.js" defer></script>
     <!-- 之後production要改成wss://這樣才是走https的websocket -->
     <script>
-        const socket = new WebSocket("wss://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
+        const socket = new WebSocket("ws://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
     </script>
 </body>
 </html>

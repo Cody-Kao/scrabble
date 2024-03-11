@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -110,6 +112,7 @@ func (m *Manager) home(w http.ResponseWriter, r *http.Request) {
 	invalidJoin := r.URL.Query().Get("invalidJoin")
 	invalidNumOfPlayer := r.URL.Query().Get("invalidNumOfPlayer")
 	invalidOtpID := r.URL.Query().Get("invalidOtpID")
+	unknownError := r.URL.Query().Get("unknownError")
 
 	data := map[string]string{
 		"clientNameCheckerError": clientNameCheckerError,
@@ -121,6 +124,7 @@ func (m *Manager) home(w http.ResponseWriter, r *http.Request) {
 		"invalidJoin":            invalidJoin,
 		"invalidNumOfPlayer":     invalidNumOfPlayer,
 		"invalidOtpID":           invalidOtpID,
+		"unknownError":           unknownError,
 	}
 
 	homeTmp.Execute(w, data)
@@ -140,7 +144,13 @@ func (m *Manager) enter(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("enter")
 	roomID := req.URL.Query().Get("roomID")
 	clientIP := req.URL.Query().Get("clientIP")
-	otpID := req.URL.Query().Get("otpID")
+	code, err := req.Cookie("Authorization")
+	if err != nil {
+		log.Println("error when geting cookie Authorization in enter endpoint:", err)
+		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	}
+	otpID := strings.Split(code.Value, "Bearer ")[1]
 	clientName := req.URL.Query().Get("clientName")
 
 	var invalidRoomID, invalidOtpID string
@@ -211,10 +221,46 @@ func (m *Manager) postCreateRoom(w http.ResponseWriter, req *http.Request) {
 
 	go r.run()
 
+	/* 這是透過增加authorization在Header裡面去傳optcode而不是走query parameters的形式
+	   缺點是不確定怎麼讓他implement PRG pattern
+	dstUrl := fmt.Sprintf("http://localhost:5000/draw?roomID=%s&clientIP=%s&clientName=%s",
+		url.QueryEscape(string(roomID)), url.QueryEscape(clientIP), url.QueryEscape(clientName))
+	fmt.Println("start sending")
+	request, err := http.NewRequest("GET", dstUrl, nil)
+	if err != nil {
+		log.Println("error when sending GET request in postInviteJoin endpoint:", err)
+		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	}
+	request.Header.Set("Authorization", "Bearer "+otpID)
+	c := &http.Client{}
+	resp, err := c.Do(request)
+	if err != nil {
+		log.Println("error when receiveing response in postInviteJoin endpoint from enter endpoint:", err)
+		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("error when parsing response in postInviteJoin endpoint from enter endpoint:", err)
+		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	}
+	fmt.Fprint(w, string(body))
+	*/
+
 	// Redirect to a GET request with the roomID, clientIP, clientName as a query parameter
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&otpID=%s&clientName=%s",
-		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(otpID), url.QueryEscape(clientName))
+	cookie := http.Cookie{
+		Name:  "Authorization",
+		Value: "Bearer " + otpID,
+	}
+	http.SetCookie(w, &cookie)
+	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
+		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(clientName))
 	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+
 }
 
 // 透過在大廳輸入房號加入他人房間
@@ -287,8 +333,13 @@ func (m *Manager) postRoomIDJoin(w http.ResponseWriter, req *http.Request) {
 
 	// Redirect to a GET request with the roomID, clientIP, clientName as query parameters
 	// 確保特殊字元不會出錯，所以用url.QueryEscape()包覆
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&otpID=%s&clientName=%s",
-		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(otpID), url.QueryEscape(clientName))
+	cookie := http.Cookie{
+		Name:  "Authorization",
+		Value: "Bearer " + otpID,
+	}
+	http.SetCookie(w, &cookie)
+	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
+		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(clientName))
 	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 }
 
@@ -396,8 +447,13 @@ func (m *Manager) postInviteJoin(w http.ResponseWriter, req *http.Request) {
 
 	// Redirect to a GET request with the roomID, clientIP, clientName as query parameters
 	// 確保特殊字元不會出錯，所以用url.QueryEscape()包覆
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&otpID=%s&clientName=%s",
-		url.QueryEscape(string(roomID)), url.QueryEscape(clientIP), url.QueryEscape(otpID), url.QueryEscape(clientName))
+	cookie := http.Cookie{
+		Name:  "Authorization",
+		Value: "Bearer " + otpID,
+	}
+	http.SetCookie(w, &cookie)
+	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
+		url.QueryEscape(string(roomID)), url.QueryEscape(clientIP), url.QueryEscape(clientName))
 	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 }
 

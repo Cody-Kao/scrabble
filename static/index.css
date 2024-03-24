@@ -1,6 +1,26 @@
 html, body {
     height: 100%;
     margin: 0;
+    background-color: #0a5efb; /* Replace with your chosen blue color */
+    overflow: hidden;
+}
+
+body input[disabled] {
+    background-color: white;
+    opacity: 1; /* Set to desired opacity */
+}
+
+#background::before{
+    background-image: url("pen.png");
+    content: "";
+    width: 200%;
+    display: block;
+    position: absolute;
+    z-index: 0;
+    left: 50%;
+    top: 50%;
+    height: 200%;
+    transform: translate(-50%,-50%) rotate(345deg);
 }
 
 .container {
@@ -14,6 +34,7 @@ html, body {
     width: 70%;
     margin: 0 auto;
     box-sizing: border-box;
+    background-color: transparent;
 }
 
 .container > * {
@@ -89,8 +110,12 @@ html, body {
     left:35%;
     gap:5px;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 12px;
     border: none;
+}
+
+#toggle-container > span {
+    color: white;
 }
 
 .switch {
@@ -133,17 +158,53 @@ html, body {
 }
 
 input:checked + .slider {
-    background-color: #4CAF50;
+    background-color: #00ff08;
 }
 
 input:focus + .slider {
-    box-shadow: 0 0 1px #4CAF50;
+    box-shadow: 0 0 1px #00ff08;
 }
 
 input:checked + .slider:before {
     -webkit-transform: translateX(26px);
     -ms-transform: translateX(26px);
     transform: translateX(26px);
+}
+
+/* roomID container */
+#roomIDContainer {
+    color:white;
+    position: absolute;
+    font-weight: bold;
+    top:-10px;
+    left:70%;
+    display: flex;
+    gap:5px;
+    align-items: center;
+    margin-top: 12px;
+    border: none;
+    height: 22px;
+}
+
+#roomIDShow {
+    width: 30px;
+    height: 30px;
+}
+
+.roomIDIsHide{
+    background-image: url("closeEye.png");
+    background-repeat: no-repeat;
+    background-size: 30px, 30px;
+}
+
+.roomIDIsShow{
+    background-image: url("openEye.png");
+    background-repeat: no-repeat;
+    background-size: 30px, 30px;
+}
+
+#roomIDShow:hover {
+    cursor: pointer;
 }
 
 /* Style for the privacy status */
@@ -158,7 +219,7 @@ input:checked + .slider:before {
     position: absolute;
     left: 90%;
     border: none;
-    background-image: url("exclamationMark.png");
+    background-image: url("share.png");
     background-repeat: no-repeat;
     background-size: 25px, 25px;
     width: 25px;
@@ -232,6 +293,7 @@ input:checked + .slider:before {
     grid-row-start: 1;
     grid-row-end: 7;
     border-radius: 10px;
+    background-color: white;
 }
 
 #memberBar {
@@ -475,13 +537,13 @@ input:checked + .slider:before {
     grid-column-start: 6;
     grid-column-end: 7;
     display: grid;
-    border-left: 2px solid #000;
     grid-template-rows: repeat(8, 1fr);
     padding-right: 12px;
     padding-left: 12px;
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.4s ease;
+    background-color: rgb(220, 220, 220, 0.5);
 }
 
 .toolKitVisible {
@@ -597,10 +659,11 @@ input:checked + .slider:before {
 }
 
 .color-option {
+    margin: 1px;
     width: 20px;
     height: 20px;
     cursor: pointer;
-    border: 2px solid white; /* Add border for better visibility */
+    border: 2px solid rgb(220, 220, 220); /* Add border for better visibility */
     transition: border 0.3s ease; /* Add smooth transition effect */
 }
 
@@ -646,6 +709,7 @@ input:checked + .slider:before {
     grid-row-start: 1;
     grid-row-end: 5;
     border-radius: 10px;
+    background-color: white;
 }
 
 #wait-member {
@@ -1022,7 +1086,6 @@ input:checked + .slider:before {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
     margin-top: 10px;
 }
 
@@ -1049,13 +1112,13 @@ input:checked + .slider:before {
     bottom:0px;
     height: 30px;
     width: 100%;
-    background-color: rgb(255, 255, 255);
-    opacity: 70%;
+    background-color: rgb(255, 255, 255, 0.7);
     z-index: 1000; /* Adjust the z-index to ensure it's above other elements */
 }
 
 #sysChatContent,
 #publicChatContent {
+    background-color: white;
     flex: 1;
     overflow-y: scroll;
     padding-left: 10px;

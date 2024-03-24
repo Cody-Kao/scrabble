@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="static/index.css">
 </head>
 <body>
+    <div id="background"></div>
     <div class="container" id="container">
         <!-- disconnectBox -->
         <div id="disconnectBox">
@@ -36,6 +37,14 @@
             <span>邀請連結:</span>
             <span id="inviteLink">{{ .InviteLink }}</span>
             <button id="copyInviteLink">複製</button>
+        </div>
+
+        <div id="roomIDContainer">
+            <span>房號</span>
+            <label for="roomIDShowCheckbox" id="roomIDShow" class="roomIDIsHide">
+                <input type="checkbox" id="roomIDShowCheckbox" style="display: none;">
+            </label>
+            <span id="roomIDPlaceholder">*******</span>
         </div>
 
         <div id="kickBox">
@@ -208,7 +217,7 @@
             <div id="sysChatContent">
                 <div id="sysPlaceholder" style="display: none;"></div> <!--為了新增訊息而用的div-->
             </div>
-            <input type="text" placeholder="請輸入訊息" disabled>
+            <input type="text" placeholder="請輸入訊息">
         </div>
 
         <div id="publicChat">
@@ -222,11 +231,12 @@
     </div>
     <span id="clientName" style="display: none;">{{ .ClientName }}</span> <!--把名字藏起來 但可以被js抓到-->
     <span id="BaseURL" style="display: none;">{{ .BaseURL }}</span> <!-- 把baseURL藏起來 但可被js抓到 -->
+    <span id="roomID" style="display: none;">{{ .RoomID }}</span> <!-- 把roomID藏起來 但可被js抓到 -->
     <!-- Connect to the WebSocket server --> 
     <script src="static/index.js" defer></script>
     <!-- 之後production要改成wss://這樣才是走https的websocket -->
     <script>
-        const socket = new WebSocket("wss://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
+        const socket = new WebSocket("ws://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
     </script>
 </body>
 </html>

@@ -1,10 +1,27 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    background-color: #0a5efb; /* Replace with your chosen blue color */
+    overflow: hidden;
+}
+
 body {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    margin: 0;
-    background-color: #f5f5f5; /* Add a background color for better aesthetics */
+}
+
+#background::before{
+    background-image: url("pen.png");
+    content: "";
+    width: 200%;
+    display: block;
+    position: absolute;
+    z-index: 0;
+    left: 50%;
+    top: 50%;
+    height: 200%;
+    transform: translate(-50%,-50%) rotate(345deg);
 }
 
 .main-section {
@@ -18,6 +35,7 @@ body {
     background-color: #fff; /* Set background color for the main section */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Add a subtle box shadow */
     overflow: hidden; /* Hide overflow content during transition */
+    z-index: 1; /* larger than background */
 }
 
 .options {

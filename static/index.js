@@ -478,7 +478,6 @@ socket.onmessage = (event) => {
                 if (name === playerName) {
                     guessSpan.innerText = "你猜對了!"
                     // 猜對後就要lock input
-                    sysChatInput.disabled = true
                     overlay.style.display = "block"
                 } else {
                     guessSpan.innerText = name + " 猜對了!"
@@ -754,6 +753,8 @@ socket.onmessage = (event) => {
             if (playerName == jsonData.payload.content) {
                 socket.close()
             }
+
+            break
         
         case "GS": // Game Start => roomMaster press the start button
             isGameOver = false
@@ -1040,8 +1041,8 @@ function reset() {
     questionMemo.style.display = "none"
 
     // lock and reset the sysChat
-    sysChatInput.value = ""
     sysChatInput.disabled = true
+    sysChatInput.value = ""
     overlay.style.display = "block"
 
     // reset score board status
@@ -1242,14 +1243,14 @@ function togglePrivacy() {
     if (privacyToggle.checked) {
         // Room is private
         privacyStatus.innerText = "限邀請連結";
-        privacyStatus.style.color = "#e74c3c"; // Red color for 'Private'
+        privacyStatus.style.color = "#ff0000";// Red color for 'Private'
         var jsonObject = {"Type":"IN", "Payload":{"Content":"0"}};
         var jsonString = JSON.stringify(jsonObject);
         socket.send(jsonString)
     } else {
         // Room is public
         privacyStatus.innerText = "房號/邀請連結";
-        privacyStatus.style.color = "#4CAF50"; // Green color for 'Public'
+        privacyStatus.style.color = "#00ff08"; // Green color for 'Public'
         var jsonObject = {"Type":"IN", "Payload":{"Content":"1"}};
         var jsonString = JSON.stringify(jsonObject);
         socket.send(jsonString)
@@ -1344,7 +1345,6 @@ Array.from(kickCross).forEach(checkbox => {
 });
 
 kickConfirmYes.addEventListener('click', function () {
-    // Add your code for "Yes" confirmation here
     Array.from(kickCross).forEach(e=>{e.checked = false;}) // Uncheck the checkbox
     kickBox.style.display = 'none';
     overlayDiv.style.display = 'none';
@@ -1369,3 +1369,23 @@ overlayDiv.addEventListener('click', function () {
     kickBox.style.display = 'none';
     overlayDiv.style.display = 'none';
 });
+
+// roomID container
+const roomIDShow = document.getElementById("roomIDShow")
+const roomIDShowCheckbox = document.getElementById("roomIDShowCheckbox")
+const roomIDPlaceholder = document.getElementById("roomIDPlaceholder")
+const roomID = document.getElementById("roomID")
+
+roomIDShow.addEventListener("click", ()=>{
+    if ( roomIDShowCheckbox.checked ) {
+        roomIDShowCheckbox.checked = false
+        roomIDPlaceholder.innerText = "********"
+        roomIDShow.classList.add("roomIDIsHide")
+        roomIDShow.classList.remove("roomIDIsShow")
+    } else {
+        roomIDShowCheckbox.checked = true
+        roomIDPlaceholder.innerText = roomID.innerText
+        roomIDShow.classList.add("roomIDIsShow")
+        roomIDShow.classList.remove("roomIDIsHide")
+    }
+})

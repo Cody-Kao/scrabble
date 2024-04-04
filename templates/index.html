@@ -236,7 +236,7 @@
     <script src="static/index.js" defer></script>
     <!-- 之後production要改成wss://這樣才是走https的websocket -->
     <script>
-        const socket = new WebSocket("ws://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
+        const socket = new WebSocket("wss://{{ .BaseURL }}/room/{{ .RoomID }}?clientIP={{ .ClientIP }}&clientName={{ .ClientName }}")
     </script>
 </body>
 </html>

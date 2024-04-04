@@ -33,7 +33,6 @@ type Room struct {
 	clients         map[string]*Client
 	guessRight      map[string]interface{}
 	questionRecord  *map[int]interface{}
-	otp             map[string]interface{}
 	roomMaster      *clientNode
 	curPainter      *clientNode
 	join            chan *Client
@@ -77,13 +76,12 @@ func newRoom(id string, ctx context.Context, cancel context.CancelFunc) *Room {
 		roomID:          id,
 		answer:          "",
 		numOfClients:    0,
-		winScore:        20,
+		winScore:        120,
 		roundScore:      0,
 		maxNumOfClients: 8,
 		clients:         make(map[string]*Client),
 		guessRight:      make(map[string]interface{}),
 		questionRecord:  &map[int]interface{}{},
-		otp:             make(map[string]interface{}),
 		join:            make(chan *Client, 10),
 		leave:           make(chan *Client, 10),
 		BroadcastArea:   make(chan *Msg, 100),
@@ -212,6 +210,10 @@ func getSortedRank(clients map[string]*Client) []*Client {
 func (r *Room) run() {
 	defer func() {
 		r.mu.Lock()
+		if r.isClosed {
+			r.mu.Unlock()
+			return
+		}
 		r.isClosed = true
 		fmt.Println("room close")
 		close(r.join)
@@ -520,7 +522,6 @@ func (r *Room) reset() {
 	r.answer = ""
 	r.guessRight = map[string]interface{}{}
 	r.questionRecord = &map[int]interface{}{}
-	r.otp = map[string]interface{}{}
 	for len(r.join) > 0 {
 		<-r.join
 	}

@@ -7,4 +7,8 @@ require (
 	github.com/gorilla/websocket v1.5.1
 )
 
-require golang.org/x/net v0.22.0 // indirect
+require (
+	github.com/gorilla/securecookie v1.1.2 // indirect
+	github.com/gorilla/sessions v1.2.2 // indirect
+	golang.org/x/net v0.22.0 // indirect
+)

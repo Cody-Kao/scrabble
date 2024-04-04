@@ -9,25 +9,27 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 )
 
 type Manager struct {
-	mu         sync.Mutex
-	numOfRooms int
-	rooms      map[string]*Room
-	cancel     context.CancelFunc
+	mu           sync.Mutex
+	numOfRooms   int
+	rooms        map[string]*Room
+	sessionStore *sessions.FilesystemStore
+	cancel       context.CancelFunc
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		numOfRooms: 0,
-		rooms:      make(map[string]*Room),
+		numOfRooms:   0,
+		rooms:        make(map[string]*Room),
+		sessionStore: sessions.NewFilesystemStore("", []byte("secret-key")),
 	}
 }
 
@@ -54,7 +56,7 @@ const (
 )
 
 var upgrader = &websocket.Upgrader{ReadBufferSize: readBufferSize, WriteBufferSize: writeBufferSize}
-var codeChars string = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"
+var codeChars string = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-!~$#&"
 
 func generateRandomCode(length int) string {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -102,6 +104,83 @@ func clientNameChecker(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func (m *Manager) joinRoomChecker(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		roomID := req.PostFormValue("roomID")
+
+		clientIP := req.PostFormValue("clientIP")
+
+		clientName := req.PostFormValue("clientName")
+
+		fmt.Println("等待驗證", roomID, clientIP, clientName)
+
+		var invalidRoomID, invalidRoute, invalidJoin, invalidNumOfPlayer, invalidClientIP, invalidClientName string
+
+		if _, ok := m.rooms[roomID]; !ok {
+			invalidRoomID = "請輸入存在的房號!"
+			redirectURL := fmt.Sprintf("/?invalidRoomID=%s", url.QueryEscape(invalidRoomID))
+			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+			return
+		}
+
+		r := m.rooms[roomID]
+
+		if r.isInvited {
+			invalidRoute = "該房間只透過邀請網址加入!"
+			redirectURL := fmt.Sprintf("/?invalidRoute=%s", url.QueryEscape(invalidRoute))
+			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+			return
+		}
+
+		if r.isPlaying {
+			invalidJoin = "該房間已開始遊戲!"
+			redirectURL := fmt.Sprintf("/?invalidJoin=%s", url.QueryEscape(invalidJoin))
+			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+			return
+		}
+
+		if r.numOfClients >= r.maxNumOfClients {
+			invalidNumOfPlayer = "該房間人數已達上限!"
+			redirectURL := fmt.Sprintf("/?invalidNumOfPlayer=%s", url.QueryEscape(invalidNumOfPlayer))
+			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+			return
+		}
+
+		for _, client := range r.clients {
+			if clientIP == client.ip {
+				invalidClientIP = "請勿重複加入該房間!"
+				redirectURL := fmt.Sprintf("/?invalidClientIP=%s", url.QueryEscape(invalidClientIP))
+				http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+				return
+			}
+			if clientName == client.name {
+				invalidClientName = "已有同名玩家在該房間!"
+				redirectURL := fmt.Sprintf("/?invalidClientName=%s", url.QueryEscape(invalidClientName))
+				http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+				return
+			}
+		}
+
+		fmt.Println("驗證成功", roomID, clientIP, clientName)
+
+		data := &ContextData{
+			roomID:     roomID,
+			clientIP:   clientIP,
+			clientName: clientName,
+		}
+
+		/*
+			用context去傳資料比較適合用於middleware跟endpoint的對接，如果想用在redirect之類的話是沒辦法的
+			因為做redirect的時候，browser會自動給一個request，導致WithValue context不能保存
+		*/
+
+		ctx := context.WithValue(req.Context(), dataKey, data)
+		newReq := req.WithContext(ctx)
+
+		next(w, newReq)
+	}
+}
+
 func (m *Manager) home(w http.ResponseWriter, r *http.Request) {
 	clientNameCheckerError := r.URL.Query().Get("clientNameCheckerError")
 	invalidRoomID := r.URL.Query().Get("invalidRoomID")
@@ -139,21 +218,41 @@ type EnterData struct {
 	BaseURL         string
 }
 
-// PRG pattern
+type ContextData struct {
+	roomID     string
+	clientIP   string
+	clientName string
+}
+
+type customedKey struct{} // key值通常是要自訂的type比較保險，所以就隨便設一個type
+
+var dataKey = customedKey{} // 用來當作withvalue context的唯一key值
+
+// PRG pattern for enter a room
 func (m *Manager) enter(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("enter")
-	roomID := req.URL.Query().Get("roomID")
-	clientIP := req.URL.Query().Get("clientIP")
-	code, err := req.Cookie("Authorization")
-	if err != nil {
-		log.Println("error when geting cookie Authorization in enter endpoint:", err)
-		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-	}
-	otpID := strings.Split(code.Value, "Bearer ")[1]
-	clientName := req.URL.Query().Get("clientName")
+	var invalidRoomID, invalidsessionID string
 
-	var invalidRoomID, invalidOtpID string
+	cookie, err := req.Cookie("sessionID")
+	if err != nil {
+		invalidsessionID = "憑證錯誤或過期!"
+		redirectURL := fmt.Sprintf("/?invalidOtpID=%s", url.QueryEscape(invalidsessionID))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+	sessionID := cookie.Value
+	fmt.Println("sessionID:", sessionID)
+
+	var session *sessions.Session
+	if session, _ = m.sessionStore.Get(req, sessionID); session.IsNew {
+		invalidsessionID = "憑證錯誤或過期!"
+		redirectURL := fmt.Sprintf("/?invalidOtpID=%s", url.QueryEscape(invalidsessionID))
+		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+		return
+	}
+	roomID := session.Values["roomID"].(string)
+	clientIP := session.Values["clientIP"].(string)
+	clientName := session.Values["clientName"].(string)
 
 	if _, ok := m.rooms[roomID]; !ok {
 		invalidRoomID = "請輸入存在的房號!"
@@ -164,19 +263,18 @@ func (m *Manager) enter(w http.ResponseWriter, req *http.Request) {
 
 	r := m.rooms[roomID]
 
-	if _, ok := r.otp[otpID]; !ok {
-		invalidOtpID = "憑證錯誤或過期!"
-		redirectURL := fmt.Sprintf("/?invalidOtpID=%s", url.QueryEscape(invalidOtpID))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	// Set MaxAge to -1 to delete the session cookie
+	session.Options.MaxAge = -1
+	err = session.Save(req, w)
+	if err != nil {
+		http.Error(w, "server error when deleting session", http.StatusInternalServerError)
 		return
 	}
 
-	delete(r.otp, otpID)
-
-	fmt.Println(roomID, clientIP, otpID, clientName, r.maxNumOfClients)
+	fmt.Println(roomID, clientIP, sessionID, clientName, r.maxNumOfClients)
 
 	encodedRoomID := base64.StdEncoding.EncodeToString([]byte(roomID))
-	data := EnterData{
+	enterData := EnterData{
 		RoomID:          roomID,
 		InviteLink:      "https://" + req.Host + "/invite/" + encodedRoomID,
 		ClientIP:        clientIP,
@@ -185,7 +283,7 @@ func (m *Manager) enter(w http.ResponseWriter, req *http.Request) {
 		BaseURL:         req.Host,
 	}
 
-	drawTmp.Execute(w, data)
+	drawTmp.Execute(w, enterData)
 }
 
 // 在大廳創建房間
@@ -200,7 +298,6 @@ func (m *Manager) postCreateRoom(w http.ResponseWriter, req *http.Request) {
 
 	fmt.Println("new roomID: ", roomID)
 	clientIP := req.PostFormValue("clientIP")
-
 	clientName := req.PostFormValue("clientName")
 	fmt.Println(roomID, clientIP, clientName)
 
@@ -210,137 +307,105 @@ func (m *Manager) postCreateRoom(w http.ResponseWriter, req *http.Request) {
 	m.numOfRooms += 1
 	fmt.Println("number of rooms: ", m.numOfRooms)
 
-	var otpID string
+	// Generate a session ID and create a session
+	var sessionID string
+	var session *sessions.Session
+	var err error
+	m.mu.Lock()
 	for {
-		otpID = generateRandomCode(8)
-		if _, ok := r.otp[otpID]; !ok {
-			r.otp[otpID] = nil
+		sessionID = generateRandomCode(8)
+		session, err = m.sessionStore.Get(req, sessionID)
+		if err != nil {
+			fmt.Println("error when getting session", err)
+		}
+		if session.IsNew {
+			session.Values["roomID"] = roomID
+			session.Values["clientIP"] = clientIP
+			session.Values["clientName"] = clientName
 			break
 		}
 	}
+	m.mu.Unlock()
+	fmt.Println("unlocked")
+	// Save the session
+	err = session.Save(req, w)
+	if err != nil {
+		http.Error(w, "server error when saving client session", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("sessionID:", sessionID)
+	cookie := http.Cookie{
+		Name:     "sessionID",
+		Value:    sessionID,
+		HttpOnly: true,
+		MaxAge:   60,
+	}
+	http.SetCookie(w, &cookie)
 
 	go r.run()
 
-	/* 這是透過增加authorization在Header裡面去傳optcode而不是走query parameters的形式
-	   缺點是不確定怎麼讓他implement PRG pattern
-	dstUrl := fmt.Sprintf("http://localhost:5000/draw?roomID=%s&clientIP=%s&clientName=%s",
-		url.QueryEscape(string(roomID)), url.QueryEscape(clientIP), url.QueryEscape(clientName))
-	fmt.Println("start sending")
-	request, err := http.NewRequest("GET", dstUrl, nil)
-	if err != nil {
-		log.Println("error when sending GET request in postInviteJoin endpoint:", err)
-		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-	}
-	request.Header.Set("Authorization", "Bearer "+otpID)
-	c := &http.Client{}
-	resp, err := c.Do(request)
-	if err != nil {
-		log.Println("error when receiveing response in postInviteJoin endpoint from enter endpoint:", err)
-		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("error when parsing response in postInviteJoin endpoint from enter endpoint:", err)
-		redirectURL := fmt.Sprintf("/?unknownError=%s", url.QueryEscape("伺服器出現未知問題"))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-	}
-	fmt.Fprint(w, string(body))
-	*/
-
 	// Redirect to a GET request with the roomID, clientIP, clientName as a query parameter
-	cookie := http.Cookie{
-		Name:  "Authorization",
-		Value: "Bearer " + otpID,
-	}
-	http.SetCookie(w, &cookie)
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
-		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(clientName))
-	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	nextURL := "/draw"
+	http.Redirect(w, req, nextURL, http.StatusSeeOther)
 
 }
 
 // 透過在大廳輸入房號加入他人房間
 func (m *Manager) postRoomIDJoin(w http.ResponseWriter, req *http.Request) {
-	roomID := req.PostFormValue("roomID")
-
-	clientIP := req.PostFormValue("clientIP")
-
-	clientName := req.PostFormValue("clientName")
-
-	fmt.Println("等待驗證", roomID, clientIP, clientName)
-
-	var invalidRoomID, invalidRoute, invalidJoin, invalidNumOfPlayer, invalidClientIP, invalidClientName string
-
-	if _, ok := m.rooms[roomID]; !ok {
-		invalidRoomID = "請輸入存在的房號!"
-		redirectURL := fmt.Sprintf("/?invalidRoomID=%s", url.QueryEscape(invalidRoomID))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	data, ok := req.Context().Value(dataKey).(*ContextData)
+	if !ok {
+		log.Println("error when getting data from context")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	roomID := data.roomID
+	clientIP := data.clientIP
+	clientName := data.clientName
 
 	r := m.rooms[roomID]
 
-	if r.isInvited {
-		invalidRoute = "該房間只透過邀請網址加入!"
-		redirectURL := fmt.Sprintf("/?invalidRoute=%s", url.QueryEscape(invalidRoute))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-		return
-	}
-
-	if r.isPlaying {
-		invalidJoin = "該房間已開始遊戲!"
-		redirectURL := fmt.Sprintf("/?invalidJoin=%s", url.QueryEscape(invalidJoin))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-		return
-	}
-
-	if r.numOfClients >= r.maxNumOfClients {
-		invalidNumOfPlayer = "該房間人數已達上限!"
-		redirectURL := fmt.Sprintf("/?invalidNumOfPlayer=%s", url.QueryEscape(invalidNumOfPlayer))
-		http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-		return
-	}
-
-	for _, client := range r.clients {
-		if clientIP == client.ip {
-			invalidClientIP = "請勿重複加入該房間!"
-			redirectURL := fmt.Sprintf("/?invalidClientIP=%s", url.QueryEscape(invalidClientIP))
-			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-			return
-		}
-		if clientName == client.name {
-			invalidClientName = "已有同名玩家在該房間!"
-			redirectURL := fmt.Sprintf("/?invalidClientName=%s", url.QueryEscape(invalidClientName))
-			http.Redirect(w, req, redirectURL, http.StatusSeeOther)
-			return
-		}
-	}
-
-	fmt.Println("驗證成功", roomID, clientIP, clientName)
-
-	var otpID string
+	// Generate a session ID and create a session
+	var sessionID string
+	var session *sessions.Session
+	var err error
+	m.mu.Lock()
 	for {
-		otpID = generateRandomCode(8)
-		if _, ok := r.otp[otpID]; !ok {
-			r.otp[otpID] = nil
+		sessionID = generateRandomCode(8)
+		session, err = m.sessionStore.Get(req, sessionID)
+		if err != nil {
+			fmt.Println("error when getting session", err)
+		}
+		if session.IsNew {
+			session.Values["roomID"] = roomID
+			session.Values["clientIP"] = clientIP
+			session.Values["clientName"] = clientName
 			break
 		}
 	}
+	m.mu.Unlock()
+	fmt.Println("unlocked")
+	// Save the session
+	err = session.Save(req, w)
+	if err != nil {
+		http.Error(w, "server error when saving client session", http.StatusInternalServerError)
+		return
+	}
 
-	// Redirect to a GET request with the roomID, clientIP, clientName as query parameters
-	// 確保特殊字元不會出錯，所以用url.QueryEscape()包覆
+	fmt.Println("sessionID:", sessionID)
 	cookie := http.Cookie{
-		Name:  "Authorization",
-		Value: "Bearer " + otpID,
+		Name:     "sessionID",
+		Value:    sessionID,
+		HttpOnly: true,
+		MaxAge:   60,
 	}
 	http.SetCookie(w, &cookie)
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
-		url.QueryEscape(roomID), url.QueryEscape(clientIP), url.QueryEscape(clientName))
-	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+
+	go r.run()
+
+	// Redirect to a GET request with the roomID, clientIP, clientName as a query parameter
+	nextURL := "/draw"
+	http.Redirect(w, req, nextURL, http.StatusSeeOther)
 }
 
 // 要把所有query parameters去掉可以用下列方法
@@ -397,6 +462,9 @@ func (m *Manager) postInviteJoin(w http.ResponseWriter, req *http.Request) {
 
 	r := m.rooms[string(roomID)]
 
+	// 取得baseURL
+	//path := "https://" + req.Host
+
 	// 取得上一頁網址 並捨棄query parameters
 	path := req.Header.Get("Referer")
 	if path == "" {
@@ -436,24 +504,42 @@ func (m *Manager) postInviteJoin(w http.ResponseWriter, req *http.Request) {
 
 	fmt.Println("驗證成功", roomID, clientIP, clientName)
 
-	var otpID string
+	// Generate a session ID and create a session
+	var sessionID string
+	var session *sessions.Session
+	m.mu.Lock()
 	for {
-		otpID = generateRandomCode(8)
-		if _, ok := r.otp[otpID]; !ok {
-			r.otp[otpID] = nil
+		sessionID = generateRandomCode(8)
+		session, err = m.sessionStore.Get(req, sessionID)
+		if err != nil {
+			fmt.Println("error when getting session", err)
+		}
+		if session.IsNew {
+			session.Values["roomID"] = string(roomID)
+			session.Values["clientIP"] = clientIP
+			session.Values["clientName"] = clientName
 			break
 		}
 	}
+	m.mu.Unlock()
+	fmt.Println("unlocked")
+	// Save the session
+	err = session.Save(req, w)
+	if err != nil {
+		http.Error(w, "server error when saving client session", http.StatusInternalServerError)
+		return
+	}
 
-	// Redirect to a GET request with the roomID, clientIP, clientName as query parameters
-	// 確保特殊字元不會出錯，所以用url.QueryEscape()包覆
+	fmt.Println("sessionID:", sessionID)
 	cookie := http.Cookie{
-		Name:  "Authorization",
-		Value: "Bearer " + otpID,
+		Name:     "sessionID",
+		Value:    sessionID,
+		HttpOnly: true,
+		MaxAge:   60,
 	}
 	http.SetCookie(w, &cookie)
-	redirectURL := fmt.Sprintf("/draw?roomID=%s&clientIP=%s&clientName=%s",
-		url.QueryEscape(string(roomID)), url.QueryEscape(clientIP), url.QueryEscape(clientName))
+
+	redirectURL := "/draw"
 	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 }
 

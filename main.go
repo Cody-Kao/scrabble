@@ -27,7 +27,7 @@ func main() {
 	//mux.HandleFunc("/draw/{roomID}", manager.getJoin).Methods("GET")
 	mux.HandleFunc("/draw", manager.enter)
 	mux.HandleFunc("/postJoin", clientNameChecker(manager.postCreateRoom)).Methods("POST")
-	mux.HandleFunc("/roomIDJoin", clientNameChecker(manager.postRoomIDJoin)).Methods("POST")
+	mux.HandleFunc("/roomIDJoin", clientNameChecker(manager.joinRoomChecker(manager.postRoomIDJoin))).Methods("POST")
 	mux.HandleFunc("/invite/{encodedRoomID}", manager.getInviteJoin).Methods("GET")
 	mux.HandleFunc("/inviteJoin", clientNameChecker(manager.postInviteJoin)).Methods("POST")
 	mux.HandleFunc("/room/{roomID}", manager.serverWS)

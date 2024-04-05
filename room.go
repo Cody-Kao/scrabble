@@ -434,7 +434,7 @@ func (r *Room) run() {
 				index, _ := strconv.Atoi(answerAndIndex[1])
 				// 把題目的index註冊掉，這樣有畫過題目就不會重複出現
 				(*r.questionRecord)[index] = nil
-				fmt.Println(r.answer)
+				fmt.Println(r.answer, index)
 				r.BroadcastArea <- &Msg{Type: "CS"}
 			} else if string(signal.Type) == "sys" { // sys means players input at the answer area
 				// check if the player guess the correct answer
@@ -507,7 +507,7 @@ func (r *Room) run() {
 }
 
 func (r *Room) reset() {
-	time.Sleep(time.Second * 1) // 不確定需不需要
+	time.Sleep(time.Millisecond * 500) // 不確定需不需要
 	r.mu.Lock()
 	fmt.Println("reset")
 	defer func() {

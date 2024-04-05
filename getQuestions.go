@@ -28,7 +28,7 @@ func getQuestions(category *map[string][]string, questionRecord *map[int]interfa
 	// map[string][]string
 	// 1. 依照category找出相應的slice  2. random出一個index，並檢查是否出現在"已使用"的set裡面，如果有就重抽
 	// 再random另外一個index，這兩個index不得重複，並檢查是否出現在"已使用"的set裡面
-	// 之後要把這裡的"動物"改成一個categoryName的變數
+	// 之後要把這裡的"日常"改成一個categoryName的變數
 	numOfelements := len((*category)["日常"])
 	var l, r int
 	l = getRandomIndex(numOfelements, questionRecord)

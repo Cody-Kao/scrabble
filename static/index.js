@@ -439,8 +439,8 @@ function gameStart(event) {
     let question = event.target.previousElementSibling.innerText
     questionMemo.innerText = question
     questionMemo.style.display = "block"
-    let index = event.target.nextSibling.innerText
-    console.log("Question:", question)
+    let index = event.target.nextElementSibling.innerText
+    console.log("Question:", question, "Index:", index)
     var jsonObject = {"Type":"CS", "Payload":{"Content":question + "@" + index}};
     var jsonString = JSON.stringify(jsonObject);
     socket.send(jsonString)   
@@ -888,8 +888,6 @@ socket.onmessage = (event) => {
             // display the transition view and clear the canvas
             console.log("RO!");
             
-            reset()
-
             // 判斷是否大家都對(1) 或是大家都沒答對(2) 或是其他(0)
             console.log("正確率", jsonData.payload.content)
             if (jsonData.payload.content === "1") {
@@ -899,6 +897,8 @@ socket.onmessage = (event) => {
             } else {
                 roundOver.innerText = "中場休息"
             }
+
+            reset()
 
             roundOver.style.display = "flex"
             
@@ -1027,6 +1027,7 @@ function reset() {
     toolKit.classList.remove("toolKitVisible")
     // clear canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.disabled = true // just for testing if it prevents drawing after the round is over
     // reset the color options and current color
     colorOptions.forEach(option => option.classList.remove('selected'));
     currentColorDisplay.style.backgroundColor = "#000000"
@@ -1095,6 +1096,7 @@ function countdownTimer(duration, callback, tickCallback, interval = 1000) {
 
 function resetProgressBar() {
     // Reset progress bar to empty and its opacity
+    progressFill.style.backgroundColor = "rgb(255, 238, 0)"
     progressFill.style.opacity = "50%";
     progressFill.style.width = '0%';
 }
@@ -1103,6 +1105,9 @@ function updateProgressBar(total, remaining) {
     // Update progress bar based on the remaining time
     const percentage = (remaining / (total * MS_PER_SEC)) * 100;
     pointReward = Math.round(percentage)
+    if ( percentage <= 30 ) {
+        progressFill.style.backgroundColor = "rgb(235, 35, 8)"
+    }
     progressFill.style.width = percentage + '%';
 }
 
@@ -1375,6 +1380,8 @@ const roomIDShow = document.getElementById("roomIDShow")
 const roomIDShowCheckbox = document.getElementById("roomIDShowCheckbox")
 const roomIDPlaceholder = document.getElementById("roomIDPlaceholder")
 const roomID = document.getElementById("roomID")
+const copyButtonIcon = document.getElementById("copyButtonIcon")
+const copyButton = document.getElementById("copyButton")
 
 roomIDShow.addEventListener("click", ()=>{
     if ( roomIDShowCheckbox.checked ) {
@@ -1382,10 +1389,32 @@ roomIDShow.addEventListener("click", ()=>{
         roomIDPlaceholder.innerText = "********"
         roomIDShow.classList.add("roomIDIsHide")
         roomIDShow.classList.remove("roomIDIsShow")
+        copyButtonIcon.style.display = "none"
+        copyButtonIcon.style.backgroundImage = "url('static/copy.png')"
     } else {
         roomIDShowCheckbox.checked = true
         roomIDPlaceholder.innerText = roomID.innerText
         roomIDShow.classList.add("roomIDIsShow")
         roomIDShow.classList.remove("roomIDIsHide")
+        copyButtonIcon.style.display = "block"
     }
+})
+
+copyButton.addEventListener("click", ()=>{
+    copyButtonIcon.style.backgroundImage = "url('static/check.png')" 
+    
+    // Create a temporary textarea element to hold the text
+    var textarea = document.createElement('textarea');
+    textarea.value = roomID.innerText;
+    document.body.appendChild(textarea);
+
+    // Select the text in the textarea
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    // Copy the text to the clipboard
+    document.execCommand('copy');
+
+    // Remove the temporary textarea
+    document.body.removeChild(textarea);
 })
